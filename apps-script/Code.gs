@@ -106,8 +106,8 @@ function sectorsSheet_() {
 }
 function settingsSheet_() {
   return ensureSheet_(SETTINGS_SHEET, ['الإعداد', 'القيمة'], function (sh) {
-    sh.getRange(2, 1, 4, 2).setValues([['دقايق السماح قبل ما يتحسب متأخر', '30'], ['تنبيه بالإيميل للقطاع اللي ماسلّمش', 'نعم'],
-      ['مواعيد التمام', DEFAULT_TIMES.join(', ')], ['بداية يوم التمام', DEFAULT_DAY_START]]);
+    sh.getRange(2, 1, 5, 2).setValues([['دقايق السماح قبل ما يتحسب متأخر', '30'], ['تنبيه بالإيميل للقطاع اللي ماسلّمش', 'نعم'],
+      ['مواعيد التمام', DEFAULT_TIMES.join(', ')], ['بداية يوم التمام', DEFAULT_DAY_START], ['مدير الموقع يضيف مشرفين جداد', 'لا']]);
   });
 }
 
@@ -123,13 +123,14 @@ function settings_() {
   const cache = CacheService.getScriptCache();
   const hit = cache.get('settings');
   if (hit) return JSON.parse(hit);
-  const out = { grace: 30, alerts: true, times: DEFAULT_TIMES.slice(), dayStart: DEFAULT_DAY_START };
+  const out = { grace: 30, alerts: true, times: DEFAULT_TIMES.slice(), dayStart: DEFAULT_DAY_START, siteCanAdd: false };
   values_(settingsSheet_(), 2).forEach(function (r) {
     const k = String(r[0]), v = String(r[1]).trim();
     if (/السماح/.test(k)) out.grace = Math.max(0, Math.min(240, Number(v) || 0));
     if (/تنبيه/.test(k)) out.alerts = v !== 'لا';
     if (/مواعيد/.test(k)) { const t = v.split(/[,،\s]+/).map(hhmm_).filter(String); if (t.length) out.times = t; }
     if (/بداية/.test(k) && hhmm_(v)) out.dayStart = hhmm_(v);
+    if (/مدير الموقع/.test(k)) out.siteCanAdd = v === 'نعم';
   });
   cache.put('settings', JSON.stringify(out), 300);
   return out;
@@ -149,8 +150,9 @@ function saveSettings(token, d) {
     if (next - mins[i] < 60) throw new Error('لازم يبقى فيه ساعة على الأقل بين كل ميعادين تمام.');
   }
   const sh = settingsSheet_();
-  sh.getRange(2, 1, 4, 2).setValues([['دقايق السماح قبل ما يتحسب متأخر', String(grace)], ['تنبيه بالإيميل للقطاع اللي ماسلّمش', d.alerts === false ? 'لا' : 'نعم'],
-    ['مواعيد التمام', times.join(', ')], ['بداية يوم التمام', dayStart]]);
+  const siteCanAdd = d.siteCanAdd === undefined ? cur.siteCanAdd : d.siteCanAdd === true;
+  sh.getRange(2, 1, 5, 2).setValues([['دقايق السماح قبل ما يتحسب متأخر', String(grace)], ['تنبيه بالإيميل للقطاع اللي ماسلّمش', d.alerts === false ? 'لا' : 'نعم'],
+    ['مواعيد التمام', times.join(', ')], ['بداية يوم التمام', dayStart], ['مدير الموقع يضيف مشرفين جداد', siteCanAdd ? 'نعم' : 'لا']]);
   CacheService.getScriptCache().remove('settings');
   return adminData(token);
 }
@@ -198,6 +200,63 @@ function saveSector(token, name, active, types) {
   } finally { lock.releaseLock(); }
   return adminData(token);
 }
+/** تغيير اسم قطاع: بيتغير في القايمة وفي حسابات المستخدمين وفي التمام القديم كمان. */
+function renameSector(token, from, to) {
+  auth_(token, ['admin']);
+  from = String(from || '').trim(); to = clean_(to, 60);
+  if (!to) throw new Error('اكتب الاسم الجديد.');
+  if (to === from) return adminData(token);
+  if (/[,،|]/.test(to)) throw new Error('اسم القطاع مينفعش يبقى فيه فاصلة أو |.');
+  const names = sectors_().map(function (s) { return s.name; });
+  const i = names.indexOf(from);
+  if (i < 0) throw new Error('القطاع مش موجود.');
+  if (names.indexOf(to) >= 0) throw new Error('فيه قطاع بالاسم ده قبل كده.');
+  const lock = LockService.getScriptLock(); lock.waitLock(30000);
+  try {
+    sectorsSheet_().getRange(i + 2, 1).setValue("'" + to);
+    replaceInUsers_(function (list) { return list.map(function (s) { return s === from ? to : s; }); });
+    // التمام القديم: القطاع والمفتاح
+    const sh = logSheet_(), last = sh.getLastRow();
+    if (last >= 2) {
+      const sc = sh.getRange(2, LC['القطاع'] + 1, last - 1, 1), kc = sh.getRange(2, LC['المفتاح'] + 1, last - 1, 1);
+      const sv = sc.getValues(), kv = kc.getValues();
+      let ch = false;
+      sv.forEach(function (r, j) { if (String(r[0]) === from) { sv[j] = ["'" + to]; kv[j] = [String(kv[j][0]).replace(/\|[^|]*$/, '|' + to)]; ch = true; } });
+      if (ch) { sc.setValues(sv); kc.setValues(kv); }
+    }
+    const es = editsSheet_(), el = es.getLastRow();
+    if (el >= 2) {
+      const rg = es.getRange(2, 5, el - 1, 1), v = rg.getValues();
+      if (v.some(function (r) { return String(r[0]) === from; })) rg.setValues(v.map(function (r) { return [String(r[0]) === from ? "'" + to : r[0]]; }));
+    }
+    CacheService.getScriptCache().remove('sectors');
+  } finally { lock.releaseLock(); }
+  return adminData(token);
+}
+/** مسح قطاع: بيتشال من القايمة ومن حسابات المستخدمين. التمام القديم بتاعه بيفضل في السجل والـ Excel. */
+function deleteSector(token, name) {
+  auth_(token, ['admin']);
+  name = String(name || '').trim();
+  const i = sectors_().map(function (s) { return s.name; }).indexOf(name);
+  if (i < 0) throw new Error('القطاع مش موجود.');
+  const lock = LockService.getScriptLock(); lock.waitLock(30000);
+  try {
+    sectorsSheet_().deleteRow(i + 2);
+    replaceInUsers_(function (list) { return list.filter(function (s) { return s !== name; }); });
+    CacheService.getScriptCache().remove('sectors');
+  } finally { lock.releaseLock(); }
+  return adminData(token);
+}
+function replaceInUsers_(fn) {
+  const sh = usersSheet_();
+  users_().forEach(function (u) {
+    if (u.sectors.indexOf('*') >= 0) return;
+    const next = fn(u.sectors.slice());
+    if (next.join('|') !== u.sectors.join('|')) sh.getRange(u.row, 4).setValue(next.join(', '));
+  });
+  dropCache_('users');
+}
+
 /** نوع وحدات القطاع: ['v'] فيلات، ['a'] شقق، أو الاتنين. */
 function saveSectorTypes(token, name, types) {
   auth_(token, ['admin']);
@@ -397,7 +456,7 @@ function adminData(token) {
 function teamData_(me) {
   const mine = mySectors_(me);
   return { users: users_().filter(function (u) { return inTeam_(me, u); }).map(publicUser_), roles: { guard: ROLES.guard },
-    sectors: sectors_().filter(function (s) { return mine.indexOf(s.name) >= 0; }), scope: 'team' };
+    sectors: sectors_().filter(function (s) { return mine.indexOf(s.name) >= 0; }), scope: 'team', canAdd: settings_().siteCanAdd };
 }
 /** المشرف ده تبع مدير الموقع؟ (فرد أمن، وكل قطاعاته جوه قطاعات المدير) */
 function inTeam_(me, u) {
@@ -411,6 +470,7 @@ function saveUser(token, d) {
     const target = findUser_(d.username);
     if (me.role === 'site') {
       if (roleKey_(d.role) !== 'guard') throw new Error('مدير الموقع بيضيف مشرفين القطاعات بس.');
+      if (d.isNew && !settings_().siteCanAdd) throw new Error('إضافة مشرفين جداد مقفولة على مدير الموقع. كلّم الإدارة.');
       if (!d.isNew && target && !inTeam_(me, target)) throw new Error('الحساب ده مش من مشرفين قطاعاتك.');
       const secs = Array.isArray(d.sectors) ? d.sectors : [];
       if (!secs.length || secs.some(function (s) { return s === '*' || !canSee_(me, s); })) throw new Error('اختار من قطاعاتك بس.');
@@ -593,7 +653,7 @@ function dashboard(token, day) {
   const cells = {};
   rows.forEach(function (x) { (cells[x.sector] = cells[x.sector] || {})[x.round] = x; });
   // آخر ٧ أيام: إجمالي كل ميعاد
-  const days = []; for (let i = 6; i >= 0; i--) days.push(shiftDay_(day, -i));
+  const days = []; for (let i = 13; i >= 0; i--) days.push(shiftDay_(day, -i));
   const wk = rowsFor_(days).filter(function (r) { return canSee_(u, r.sector); });
   const week = days.map(function (dd) {
     const o = { day: dd };

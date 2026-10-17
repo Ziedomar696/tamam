@@ -118,6 +118,33 @@ td.c-late{background:var(--amber-bg)}td.c-late b{color:var(--amber)}
 td.c-miss{background:var(--red-bg);color:var(--red);font-weight:600;font-size:12px}
 td.c-wait{color:var(--muted);font-size:12px}
 td.c-future{color:var(--muted)}
+.viz{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--s8:#e34948;--grid:#e1e0d9;--axis:#c3c2b7;--vmuted:#6b6a66}
+@media (prefers-color-scheme: dark){.viz{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;--grid:#2c2c2a;--axis:#383835;--vmuted:#a9a8a2}}
+.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.charts .full{grid-column:1/-1}
+@media (max-width:820px){.charts{grid-template-columns:1fr}}
+.chart h3{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.chart h3 select{width:auto;padding:4px 8px;font-size:13px}
+.keys{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--muted)}
+.keys i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-inline-end:5px}
+.keys i.ln{height:3px;border-radius:2px;vertical-align:3px;width:16px}
+.hb{display:grid;gap:8px}
+.hb .row{display:grid;grid-template-columns:minmax(70px,26%) minmax(0,1fr) auto;gap:8px;align-items:center;font-size:13px}
+.hb .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hb .track{display:flex;height:16px;gap:2px}
+.hb .seg{height:100%;min-width:2px}
+.hb .seg:first-child{border-start-start-radius:0;border-end-start-radius:0}
+.hb .seg:last-child{border-start-end-radius:4px;border-end-end-radius:4px}
+.hb .val{font-family:var(--mono);font-size:12.5px;min-width:3ch;text-align:left;color:var(--ink)}
+.hb .seg:hover,.hb .seg:focus-visible{filter:brightness(1.12);outline:none}
+.lc svg{width:100%;height:auto;display:block;overflow:visible}
+.lc text{font-family:var(--mono);font-size:10px;fill:var(--vmuted)}
+.vtip{position:fixed;z-index:70;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12.5px;box-shadow:0 6px 18px rgba(0,0,0,.18);max-width:240px}
+.vtip b{font-family:var(--mono)}
+.vtip .r{display:flex;align-items:center;gap:6px;justify-content:space-between}
+.vtip i{display:inline-block;width:10px;height:10px;border-radius:2px}
+.secrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.secrow input.rn{width:150px;padding:4px 8px;font-size:13px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-inline-end:4px}
 dialog{border:1px solid var(--line);border-radius:var(--radius);padding:0;background:var(--surface);color:var(--ink);width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
@@ -222,6 +249,12 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
       <div id="dTable"></div>
       <p class="hint">اضغط على أي خانة تشوف مين سلّم وإمتى وأي تعديل حصل.</p>
     </div>
+    <div class="charts viz" id="dCharts">
+      <div class="card chart full"><h3>إجمالي التمام — آخر ١٤ يوم</h3><div class="keys" id="kTrend"></div><div class="lc" id="cTrend"></div></div>
+      <div class="card chart"><h3>فيلات وشقق — كل ميعاد</h3><div class="keys" id="kUnits"></div><div class="hb" id="cUnits"></div></div>
+      <div class="card chart"><h3>ملاك / مستأجرين / مفوضين — كل ميعاد</h3><div class="keys" id="kKinds"></div><div class="hb" id="cKinds"></div></div>
+      <div class="card chart full"><h3><span>القطاعات</span><select id="cSecRound" aria-label="الميعاد"></select></h3><div class="keys" id="kSecs"></div><div class="hb" id="cSecs"></div></div>
+    </div>
     <div class="card"><h2>آخر ٧ أيام (الإجمالي)</h2><div id="dWeek"></div></div>
     <div class="card">
       <h2>تحميل Excel</h2>
@@ -238,20 +271,21 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
   <section data-v="admin" style="display:grid;gap:14px" hidden>
     <div class="card">
       <h2><span id="usersTitle">المستخدمين</span> <button class="sm solid" id="addUserBtn" type="button" style="margin-inline-start:auto">+ مستخدم جديد</button></h2>
-      <p class="hint" id="usersHint">«فرد أمن / مشرف قطاع»: بيسلّم تمام قطاعاته بس، في الميعاد المفتوح. «مدير»: بيشوف لوحة المتابعة لقطاعاته (أو كلها) ويقدر يصحّح أي تمام. «مدير الموقع»: زي المدير، وكمان بيضيف ويعدّل مشرفين القطاعات في قطاعاته. «الإدارة»: كل حاجة.</p>
+      <p class="hint" id="usersHint">«فرد أمن / مشرف قطاع»: بيسلّم تمام قطاعاته بس، في الميعاد المفتوح. «مدير»: بيشوف لوحة المتابعة لقطاعاته (أو كلها) ويقدر يصحّح أي تمام. «مدير الموقع»: زي المدير، وكمان بيتابع حسابات مشرفين قطاعاته (يعدّل ويوقف ويغيّر كلمة السر، والإضافة حسب الإعدادات تحت). «الإدارة»: كل حاجة.</p>
       <div class="tablewrap"><table><thead><tr><th>الاسم</th><th>اسم المستخدم</th><th>الدور</th><th>القطاعات</th><th>الحالة</th><th>آخر دخول</th><th></th></tr></thead><tbody id="usersBody"></tbody></table></div>
     </div>
     <div class="card" id="secCard">
       <h2>القطاعات</h2>
       <div class="tagset" id="secList"></div>
       <form class="bar-row" id="secForm"><label class="f grow">قطاع جديد<input id="newSec"></label><label class="f">الوحدات<select id="newSecType"><option value="va">فيلات وشقق</option><option value="v">فيلات بس</option><option value="a">شقق بس</option></select></label><button class="solid" type="submit">إضافة</button></form>
-      <p class="hint">لكل قطاع اختار فيه إيه: فيلات بس، شقق بس، أو الاتنين. التمام بيتقسم على حسب كده. القطاع الموقوف بيختفي من التسليم واللوحة، بس تمامه القديم بيفضل في السجل.</p>
+      <p class="hint">«تعديل الاسم» بيغيّر الاسم في كل حتة: القايمة، وحسابات المشرفين، والتمام القديم. «مسح» بيشيل القطاع من القايمة ومن حسابات المستخدمين، والتمام القديم بتاعه بيفضل في السجل والـ Excel. لكل قطاع اختار فيه إيه: فيلات بس، شقق بس، أو الاتنين. التمام بيتقسم على حسب كده. القطاع الموقوف بيختفي من التسليم واللوحة، بس تمامه القديم بيفضل في السجل.</p>
     </div>
     <form class="card" id="setForm">
       <h2>الإعدادات</h2>
       <div class="bar-row">
         <label class="f">التمام يتحسب «متأخر» بعد الميعاد بكام دقيقة؟<input id="sGrace" type="number" min="0" max="240"></label>
         <label class="f">تنبيه بالإيميل لو قطاع ماسلّمش<select id="sAlerts"><option value="1">أيوه</option><option value="0">لأ</option></select></label>
+        <label class="f">مدير الموقع يضيف مشرفين جداد؟<select id="sSiteAdd"><option value="0">لأ (مقفولة)</option><option value="1">أيوه</option></select></label>
       </div>
       <h3>مواعيد التمام</h3>
       <div class="timelist" id="sTimes"></div>
@@ -306,6 +340,7 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
 </dialog>
 
 <div class="toast" id="toast" hidden role="status"></div>
+<div class="vtip" id="vtip" hidden></div>
 
 <script>
 (function(){
@@ -531,9 +566,80 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     }).join("");
     var tot = "<tr><th>الإجمالي</th>" + d.rounds.map(function(r){ return '<th style="text-align:center">'+(r.done ? fmt(r.total) : "—")+"</th>"; }).join("") + "</tr>";
     $("#dTable").innerHTML = '<div class="tablewrap"><table><thead>'+head+'</thead><tbody>'+body+'</tbody><tfoot>'+tot+'</tfoot></table></div><p class="hint">الأرقام الصغيرة: في القطاع اللي فيه فيلات وشقق = إجمالي كل نوع، وفي القطاع اللي فيه نوع واحد = ملاك · مستأجرين · مفوضين.</p>';
+    drawCharts(d);
     $("#dWeek").innerHTML = '<div class="tablewrap"><table><thead><tr><th>اليوم</th>' + d.rounds.map(function(r){ return "<th>"+esc(r.label)+"</th>"; }).join("") + "</tr></thead><tbody>" +
-      d.week.slice().reverse().map(function(w){ return "<tr><td>"+esc(dayLabel(w.day))+"</td>" + d.rounds.map(function(r){ return '<td class="num">'+(w[r.key] == null ? "—" : fmt(w[r.key]))+"</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table></div>";
+      d.week.slice(-7).reverse().map(function(w){ return "<tr><td>"+esc(dayLabel(w.day))+"</td>" + d.rounds.map(function(r){ return '<td class="num">'+(w[r.key] == null ? "—" : fmt(w[r.key]))+"</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table></div>";
   }
+  // ================================================================ الرسوم البيانية
+  var SER = ["var(--s1)","var(--s2)","var(--s3)","var(--s4)","var(--s5)","var(--s6)","var(--s7)","var(--s8)"];
+  function tip(html, x, y){ var t = $("#vtip"); if(!html){ t.hidden = true; return; } t.innerHTML = html; t.hidden = false; var w = t.offsetWidth, h = t.offsetHeight; t.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, x - w / 2)) + "px"; t.style.top = Math.max(8, y - h - 12) + "px"; }
+  function keys(el, items, line){ el.innerHTML = items.map(function(k){ return '<span><i class="'+(line ? "ln" : "")+'" style="background:'+k.c+'"></i>'+esc(k.n)+'</span>'; }).join(""); }
+  /** أعمدة أفقية (مقسومة أو لأ): rows = [{label, parts:[{n, c, v}]}] */
+  function hbars(el, rows, emptyMsg){
+    var max = Math.max.apply(null, rows.map(function(r){ return r.parts.reduce(function(a, p){ return a + p.v; }, 0); }).concat([0]));
+    if(!max){ el.innerHTML = '<div class="empty">'+esc(emptyMsg || "لسه مفيش تمام.")+'</div>'; return; }
+    el.innerHTML = rows.map(function(r, i){
+      var tot = r.parts.reduce(function(a, p){ return a + p.v; }, 0);
+      var segs = r.parts.filter(function(p){ return p.v > 0; }).map(function(p, j){ return '<span class="seg" tabindex="0" data-i="'+i+'" style="width:'+(p.v / max * 100)+'%;background:'+p.c+'" aria-label="'+esc(r.label+" — "+p.n+": "+p.v)+'"></span>'; }).join("");
+      return '<div class="row" data-i="'+i+'"><span class="lbl">'+bd(r.label)+'</span><span class="track">'+segs+'</span><span class="val">'+(tot ? fmt(tot) : "—")+'</span></div>';
+    }).join("");
+    el.onmousemove = function(e){ var rw = e.target.closest(".row"); if(!rw){ tip(); return; } var r = rows[+rw.getAttribute("data-i")];
+      tip("<div><b>"+esc(r.label)+"</b></div>" + r.parts.map(function(p){ return '<div class="r"><span><i style="background:'+p.c+'"></i> '+esc(p.n)+'</span><b>'+fmt(p.v)+'</b></div>'; }).join("") + (r.parts.length > 1 ? '<div class="r"><span>الإجمالي</span><b>'+fmt(r.parts.reduce(function(a, p){ return a + p.v; }, 0))+'</b></div>' : ""), e.clientX, e.clientY); };
+    el.onmouseleave = function(){ tip(); };
+  }
+  /** خطوط على مدار الأيام: days = [labels], series = [{n, c, v:[...] (null = مفيش)}] */
+  function lines(el, days, series){
+    var W = 640, H = 200, L = 34, R = 10, T = 10, Bm = 24, iw = W - L - R, ih = H - T - Bm;
+    var vals = []; series.forEach(function(s){ s.v.forEach(function(x){ if(x != null) vals.push(x); }); });
+    if(!vals.length){ el.innerHTML = '<div class="empty">لسه مفيش تمام في الفترة دي.</div>'; return; }
+    var max = Math.max.apply(null, vals), step = Math.pow(10, Math.floor(Math.log10(Math.max(1, max)))); var top = Math.ceil(max / step) * step; if(top / step < 3) { step /= 2; top = Math.ceil(max / step) * step; }
+    var x = function(i){ return L + (days.length < 2 ? iw / 2 : i * iw / (days.length - 1)); }, y = function(v){ return T + ih - v / top * ih; };
+    var g = ""; for(var t = 0; t <= top + 1e-9; t += step){ g += '<line x1="'+L+'" x2="'+(W - R)+'" y1="'+y(t)+'" y2="'+y(t)+'" stroke="var(--grid)" stroke-width="1"/><text x="'+(L - 6)+'" y="'+(y(t) + 3)+'" text-anchor="end">'+t+'</text>'; }
+    var every = Math.ceil(days.length / 7);
+    days.forEach(function(d, i){ if(i % every === 0 || i === days.length - 1) g += '<text x="'+x(i)+'" y="'+(H - 6)+'" text-anchor="middle">'+esc(d.short)+'</text>'; });
+    series.forEach(function(s){
+      var path = "", pen = false;
+      s.v.forEach(function(v, i){ if(v == null){ pen = false; return; } path += (pen ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1) + " "; pen = true; });
+      g += '<path d="'+path+'" fill="none" stroke="'+s.c+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+      s.v.forEach(function(v, i){ if(v != null) g += '<circle cx="'+x(i)+'" cy="'+y(v)+'" r="3.5" fill="'+s.c+'" stroke="var(--surface)" stroke-width="2"/>'; });
+    });
+    g += '<line id="lcX" x1="0" x2="0" y1="'+T+'" y2="'+(T + ih)+'" stroke="var(--axis)" stroke-width="1" visibility="hidden"/>';
+    el.innerHTML = '<svg viewBox="0 0 '+W+' '+H+'" dir="ltr" role="img" aria-label="إجمالي التمام لكل ميعاد على مدار الأيام">'+g+'</svg>';
+    var svg = el.querySelector("svg"), cross = el.querySelector("#lcX");
+    svg.onmousemove = function(e){
+      var r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W;
+      var i = Math.max(0, Math.min(days.length - 1, Math.round((px - L) / (iw / Math.max(1, days.length - 1)))));
+      cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("visibility", "visible");
+      tip("<div><b>"+esc(days[i].long)+"</b></div>" + series.map(function(s){ return '<div class="r"><span><i style="background:'+s.c+'"></i> '+esc(s.n)+'</span><b>'+(s.v[i] == null ? "—" : fmt(s.v[i]))+'</b></div>'; }).join(""), e.clientX, e.clientY);
+    };
+    svg.onmouseleave = function(){ cross.setAttribute("visibility", "hidden"); tip(); };
+  }
+  function drawCharts(d){
+    var rs = d.rounds;
+    // ١) آخر ١٤ يوم
+    var days = d.week.map(function(w){ var p = w.day.split("-").map(Number); return { short: p[2] + "/" + p[1], long: dayLabel(w.day) }; });
+    var ser = rs.map(function(r, i){ return { n: r.label, c: SER[i % 8], v: d.week.map(function(w){ return w[r.key]; }) }; });
+    keys($("#kTrend"), ser.map(function(s){ return { n: s.n, c: s.c }; }), true); lines($("#cTrend"), days, ser);
+    // ٢) فيلات وشقق
+    keys($("#kUnits"), [{ n: "فيلات", c: SER[0] }, { n: "شقق", c: SER[1] }]);
+    hbars($("#cUnits"), rs.map(function(r){ return { label: r.label, parts: [{ n: "فيلات", c: SER[0], v: r.villas }, { n: "شقق", c: SER[1], v: r.apts }] }; }), "لسه مفيش تمام في اليوم ده.");
+    // ٣) ملاك / مستأجرين / مفوضين
+    keys($("#kKinds"), [{ n: "ملاك", c: SER[0] }, { n: "مستأجرين", c: SER[1] }, { n: "مفوضين", c: SER[2] }]);
+    hbars($("#cKinds"), rs.map(function(r){ return { label: r.label, parts: [{ n: "ملاك", c: SER[0], v: r.owners }, { n: "مستأجرين", c: SER[1], v: r.tenants }, { n: "مفوضين", c: SER[2], v: r.delegates }] }; }), "لسه مفيش تمام في اليوم ده.");
+    // ٤) القطاعات في ميعاد
+    var sel = $("#cSecRound"), cur = sel.value, withData = rs.filter(function(r){ return r.done; });
+    sel.innerHTML = rs.map(function(r){ return '<option value="'+r.key+'">'+esc(r.label)+'</option>'; }).join("");
+    sel.value = withData.some(function(r){ return r.key === cur; }) ? cur : (withData.length ? withData[withData.length - 1].key : rs[0] && rs[0].key);
+    drawSecChart();
+  }
+  function drawSecChart(){
+    if(!DASH) return; var k = $("#cSecRound").value;
+    keys($("#kSecs"), [{ n: "فيلات", c: SER[0] }, { n: "شقق", c: SER[1] }]);
+    hbars($("#cSecs"), DASH.sectors.map(function(s){ var x = (DASH.cells[s] || {})[k]; return { label: s, parts: x ? [{ n: "فيلات", c: SER[0], v: x.v.total }, { n: "شقق", c: SER[1], v: x.a.total }] : [{ n: "ماسلّمش", c: SER[0], v: 0 }] }; }), "مفيش قطاع سلّم الميعاد ده.");
+  }
+  $("#cSecRound").addEventListener("change", drawSecChart);
+  window.addEventListener("scroll", function(){ tip(); }, { passive: true });
+
   var CELL = null;
   $("#dTable").addEventListener("click", function(e){
     var td = e.target.closest("td[data-s]"); if(!td) return;
@@ -565,23 +671,40 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
   // ================================================================ الإدارة
   var AD = null, editUser = null, delU = false;
   function loadAdmin(){ run("adminData", TOKEN).then(function(d){ AD = d; drawAdmin(); }).catch(function(err){ toast(errMsg(err)); }); }
-  function secLabel(u){ return u.role === "admin" || u.sectors.indexOf("*") >= 0 ? "كل القطاعات" : u.sectors.map(bd).join("، "); }
+  function secLabel(u){ return u.role === "admin" || u.sectors.indexOf("*") >= 0 ? "كل القطاعات" : u.sectors.length ? u.sectors.map(bd).join("، ") : '<span class="pill p-red">مفيش قطاع — حدّد له قطاع</span>'; }
   function drawAdmin(){
     $("#usersBody").innerHTML = AD.users.map(function(u){ return "<tr><td>"+esc(u.name)+"</td><td class=\"num\">"+esc(u.username)+"</td><td>"+esc(ROLE_LABEL[u.role])+"</td><td>"+secLabel(u)+"</td><td>"+(u.active ? '<span class="pill p-green">شغال</span>' : '<span class="pill p-red">موقوف</span>')+"</td><td class=\"num\">"+esc(u.lastLogin || "—")+'</td><td><button class="sm" type="button" data-u="'+esc(u.username)+'">تعديل</button></td></tr>'; }).join("");
     var tsel = function(s){ var v = s.types.join(""); return '<select data-sectype="'+esc(s.name)+'" aria-label="وحدات '+esc(s.name)+'" style="width:auto;padding:4px 6px;font-size:13px"><option value="va"'+(v === "va" ? " selected" : "")+'>فيلات وشقق</option><option value="v"'+(v === "v" ? " selected" : "")+'>فيلات بس</option><option value="a"'+(v === "a" ? " selected" : "")+'>شقق بس</option></select>'; };
-    $("#secList").innerHTML = AD.sectors.map(function(s){ return '<span class="tagitem'+(s.active ? "" : " off")+'"><b>'+bd(s.name)+'</b>'+tsel(s)+'<button class="sm" type="button" data-sec="'+esc(s.name)+'" data-on="'+(s.active ? "0" : "1")+'">'+(s.active ? "إيقاف" : "تشغيل")+'</button></span>'; }).join("");
+    $("#secList").innerHTML = AD.sectors.map(function(s){ var n = esc(s.name); return '<span class="tagitem secrow'+(s.active ? "" : " off")+'" data-name="'+n+'"><b>'+bd(s.name)+'</b>'+tsel(s)+
+      '<button class="sm" type="button" data-sec="'+n+'" data-on="'+(s.active ? "0" : "1")+'">'+(s.active ? "إيقاف" : "تشغيل")+'</button>' +
+      '<button class="sm" type="button" data-rename="'+n+'">تعديل الاسم</button><button class="sm bad" type="button" data-del="'+n+'">مسح</button></span>'; }).join("");
     var team = AD.scope === "team", hint = $("#usersHint");
     if(!hint.getAttribute("data-full")) hint.setAttribute("data-full", hint.textContent);
     $("#secCard").hidden = team; $("#setForm").hidden = team;
     $("#usersTitle").textContent = team ? "مشرفين قطاعاتك" : "المستخدمين"; $("#addUserBtn").textContent = team ? "+ مشرف جديد" : "+ مستخدم جديد";
-    hint.textContent = team ? "دول مشرفين القطاعات اللي في قطاعاتك. تقدر تضيف مشرف جديد، أو تعدّل قطاعاته، أو تغيّر كلمة السر بتاعته، أو توقف حسابه." : hint.getAttribute("data-full");
+    $("#addUserBtn").hidden = team && !AD.canAdd;
+    hint.textContent = team ? (AD.canAdd ? "دول مشرفين القطاعات اللي في قطاعاتك. تقدر تضيف مشرف جديد، أو تعدّل قطاعاته، أو تغيّر كلمة السر بتاعته، أو توقف حسابه." : "دول مشرفين القطاعات اللي في قطاعاتك. تقدر تعدّل قطاعاتهم أو تغيّر كلمة السر أو توقف الحساب. إضافة مشرفين جداد مقفولة — بتتعمل من الإدارة.") : hint.getAttribute("data-full");
     $("#uRole").innerHTML = (team ? ["guard"] : ["guard","manager","site","admin"]).map(function(k){ return '<option value="'+k+'">'+esc(ROLE_LABEL[k])+'</option>'; }).join("");
     if(team) return;
-    $("#sGrace").value = AD.settings.grace; $("#sAlerts").value = AD.settings.alerts ? "1" : "0";
+    $("#sGrace").value = AD.settings.grace; $("#sAlerts").value = AD.settings.alerts ? "1" : "0"; $("#sSiteAdd").value = AD.settings.siteCanAdd ? "1" : "0";
     $("#sDayStart").value = AD.settings.dayStart; drawTimes(AD.settings.times);
   }
   function afterAdmin(d){ AD = d; drawAdmin(); run("whoami", TOKEN).then(function(r){ B = r; options($("#tSector"), B.sectors, $("#tSector").value); fillForm(); }); }
-  $("#secList").addEventListener("click", function(e){ var b = e.target.closest("button[data-sec]"); if(!b) return; busy(b, true); run("saveSector", TOKEN, b.getAttribute("data-sec"), b.getAttribute("data-on") === "1").then(afterAdmin).catch(function(err){ toast(errMsg(err)); busy(b, false); }); });
+  var delArm = null;
+  $("#secList").addEventListener("click", function(e){
+    var rn = e.target.closest("button[data-rename]"), del = e.target.closest("button[data-del]"), ok = e.target.closest("button[data-rnok]"), no = e.target.closest("button[data-rnno]");
+    if(rn){ var name = rn.getAttribute("data-rename"), row = rn.closest(".secrow");
+      row.innerHTML = '<input class="rn" value="'+esc(name)+'" aria-label="الاسم الجديد لقطاع '+esc(name)+'"><button class="sm solid" type="button" data-rnok="'+esc(name)+'">حفظ</button><button class="sm" type="button" data-rnno>إلغاء</button>';
+      var inp = row.querySelector("input"); inp.focus(); inp.select();
+      inp.addEventListener("keydown", function(ev){ if(ev.key === "Enter"){ ev.preventDefault(); row.querySelector("[data-rnok]").click(); } if(ev.key === "Escape") drawAdmin(); });
+      return; }
+    if(no){ drawAdmin(); return; }
+    if(ok){ var from = ok.getAttribute("data-rnok"), to = ok.closest(".secrow").querySelector("input").value.trim(); if(!to){ toast("اكتب الاسم الجديد."); return; }
+      busy(ok, true); run("renameSector", TOKEN, from, to).then(function(d){ toast("اتغير الاسم: " + from + " ← " + to + " (وفي التمام القديم كمان)"); afterAdmin(d); }).catch(function(err){ toast(errMsg(err)); busy(ok, false); }); return; }
+    if(del){ var nm = del.getAttribute("data-del");
+      if(delArm !== nm){ delArm = nm; del.textContent = "متأكد؟ اضغط تاني"; setTimeout(function(){ if(delArm === nm){ delArm = null; if(del.isConnected) del.textContent = "مسح"; } }, 4000); return; }
+      delArm = null; busy(del, true); run("deleteSector", TOKEN, nm).then(function(d){ toast("اتمسح قطاع " + nm + ". التمام القديم بتاعه فاضل في السجل."); afterAdmin(d); }).catch(function(err){ toast(errMsg(err)); busy(del, false); }); return; }
+    var b = e.target.closest("button[data-sec]"); if(!b) return; busy(b, true); run("saveSector", TOKEN, b.getAttribute("data-sec"), b.getAttribute("data-on") === "1").then(afterAdmin).catch(function(err){ toast(errMsg(err)); busy(b, false); }); });
   $("#secList").addEventListener("change", function(e){ var sel = e.target.closest("select[data-sectype]"); if(!sel) return; run("saveSectorTypes", TOKEN, sel.getAttribute("data-sectype"), sel.value.split("")).then(function(d){ toast("اتحفظ: " + sel.options[sel.selectedIndex].text); afterAdmin(d); }).catch(function(err){ toast(errMsg(err)); }); });
   $("#secForm").addEventListener("submit", function(e){ e.preventDefault(); var v = $("#newSec").value.trim(); if(!v) return; run("saveSector", TOKEN, v, true, $("#newSecType").value === "v" ? "فيلات" : $("#newSecType").value === "a" ? "شقق" : "فيلات وشقق").then(function(d){ $("#newSec").value = ""; toast("اتضاف قطاع " + v); afterAdmin(d); }).catch(function(err){ toast(errMsg(err)); }); });
   function tLabel(t){ var p = t.split(":").map(Number), h = p[0], m = p[1]; if(isNaN(h)) return ""; if(h === 0 && m === 0) return "12 منتصف الليل"; var h12 = h % 12 === 0 ? 12 : h % 12; return h12 + (m ? ":" + ("0"+m).slice(-2) : "") + " " + (h < 4 ? "بعد منتصف الليل" : h < 12 ? "صباحاً" : h < 15 ? "ظهراً" : h < 18 ? "عصراً" : "مساءً"); }
@@ -592,7 +715,7 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
   $("#sTimes").addEventListener("input", function(e){ if(e.target.tagName === "INPUT") e.target.nextElementSibling.textContent = tLabel(e.target.value); });
   $("#sTimes").addEventListener("click", function(e){ var b = e.target.closest("button[data-rm]"); if(!b) return; if($$("#sTimes input").length <= 1){ toast("لازم يفضل ميعاد واحد على الأقل."); return; } b.parentNode.remove(); });
   $("#sAddTime").addEventListener("click", function(){ var l = readTimes(); l.push(""); drawTimes(l); var ins = $$("#sTimes input"); ins[ins.length - 1].focus(); });
-  $("#setForm").addEventListener("submit", function(e){ e.preventDefault(); run("saveSettings", TOKEN, { grace: $("#sGrace").value, alerts: $("#sAlerts").value === "1", times: readTimes(), dayStart: $("#sDayStart").value }).then(function(d){ AD = d; drawAdmin(); toast("اتحفظت الإعدادات."); run("whoami", TOKEN).then(function(r){ B = r; $("#tRound").innerHTML = B.rounds.map(function(x){ return '<option value="'+x.key+'">'+esc(x.label)+'</option>'; }).join(""); }); }).catch(function(err){ toast(errMsg(err)); }); });
+  $("#setForm").addEventListener("submit", function(e){ e.preventDefault(); run("saveSettings", TOKEN, { grace: $("#sGrace").value, alerts: $("#sAlerts").value === "1", siteCanAdd: $("#sSiteAdd").value === "1", times: readTimes(), dayStart: $("#sDayStart").value }).then(function(d){ AD = d; drawAdmin(); toast("اتحفظت الإعدادات."); run("whoami", TOKEN).then(function(r){ B = r; $("#tRound").innerHTML = B.rounds.map(function(x){ return '<option value="'+x.key+'">'+esc(x.label)+'</option>'; }).join(""); }); }).catch(function(err){ toast(errMsg(err)); }); });
 
   function drawSecs(sel){
     var role = $("#uRole").value;
