@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>تمام الملاك</title>
+<meta name="description" content="حصر وتمام الملاك في وحدات مراسي">
+<meta name="theme-color" content="#1E5A4C">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="التمام">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root{--brand:#1E5A4C;--accent:#C99A2E;--bg:#F4F6F3;--ink:#1E5A4C;--muted:#5E6B66;--line:#DDE5E1;--surface:#fff}
+  @media (prefers-color-scheme: dark){:root{--bg:#10141D;--ink:#E8EAEF;--muted:#A39B8C;--line:#2D3546;--surface:#171D29}}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans Arabic","Segoe UI",Tahoma,system-ui,sans-serif}
+  body{padding-top:env(safe-area-inset-top,0px)}
+  [hidden]{display:none!important}
+  #frame{position:fixed;inset:env(safe-area-inset-top,0px) 0 0 0;width:100%;height:calc(100% - env(safe-area-inset-top,0px));border:0;background:var(--bg)}
+  .screen{position:fixed;inset:0;display:grid;place-items:center;padding:16px;text-align:center;background:var(--bg);z-index:2}
+  .box{max-width:380px;width:100%;display:grid;gap:14px;justify-items:center}
+  .barrier{width:64px;height:64px;border-radius:14px;background:var(--brand) url(icons/icon-192.png) center/cover}
+  h1{margin:0;font-size:20px}
+  p{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+  .spin{width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  input{font:inherit;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);direction:ltr;text-align:left}
+  button{font:inherit;font-weight:700;width:100%;padding:12px;border:0;border-radius:8px;background:var(--brand);color:#fff;cursor:pointer}
+  .err{color:#B3261E;font-size:13px;min-height:1.2em}
+</style>
+</head>
+<body>
+
+<!-- تحميل -->
+<div class="screen" id="loading">
+  <div class="box">
+    <div class="barrier" aria-hidden="true"></div>
+    <h1>تمام الملاك</h1>
+    <div class="spin" aria-hidden="true"></div>
+    <p id="loadMsg">بيفتح…</p>
+  </div>
+</div>
+
+<!-- مفيش نت -->
+<div class="screen" id="offline" hidden>
+  <div class="box">
+    <div class="barrier" aria-hidden="true"></div>
+    <h1>مفيش إنترنت</h1>
+    <p>البرنامج محتاج نت علشان يحفظ في الشيت. شغّل النت أو الواي فاي وهيفتح لوحده.</p>
+    <button type="button" onclick="location.reload()">جرّب تاني</button>
+  </div>
+</div>
+
+<!-- أول مرة: لينك السكريبت -->
+<div class="screen" id="setup" hidden>
+  <form class="box" id="setupForm">
+    <div class="barrier" aria-hidden="true"></div>
+    <h1>ربط التطبيق بتمام الملاك</h1>
+    <p>الصق لينك الـ Web app من Apps Script — آخره <bdi dir="ltr"><b>/exec</b></bdi></p>
+    <input id="urlIn" type="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" required>
+    <div class="err" id="urlErr"></div>
+    <button>حفظ وفتح</button>
+  </form>
+</div>
+
+<iframe id="frame" title="تمام الملاك" allow="camera; clipboard-write" hidden></iframe>
+
+<script>
+/*
+ * ⚙️ حط لينك الـ Web app هنا (آخره /exec) علشان كل الأجهزة تفتح على طول.
+ *    لو سبته فاضي، التطبيق هيطلب اللينك أول مرة على كل جهاز.
+ */
+var APP_URL = "";
+
+(function(){
+  var KEY = "tm.appUrl";
+  function get(){ try{ return localStorage.getItem(KEY) || ""; }catch(e){ return ""; } }
+  function set(v){ try{ localStorage.setItem(KEY, v); }catch(e){} }
+  function valid(u){ return /^https:\/\/script\.google\.com\/(a\/[^\/]+\/)?macros\/s\/[\w-]+\/exec\/?$/.test(u); }
+  function show(id){ ["loading","offline","setup"].forEach(function(s){ document.getElementById(s).hidden = s !== id; }); }
+
+  // ?reset=1 بيمسح اللينك المحفوظ
+  if (/[?&]reset=1/.test(location.search)) { set(""); history.replaceState(null, "", location.pathname); }
+
+  // لو اللينك اللي فوق مش لينك حقيقي (فاضي أو فيه ...) نتجاهله ونطلب اللينك
+  var url = valid(APP_URL) ? APP_URL : (valid(get()) ? get() : "");
+
+  function open(){
+    if (!navigator.onLine) { show("offline"); return; }
+    show("loading");
+    var f = document.getElementById("frame");
+    var slow = setTimeout(function(){ document.getElementById("loadMsg").textContent = "النت بطيء شوية… لسه بيفتح"; }, 8000);
+    f.onload = function(){ clearTimeout(slow); f.hidden = false; show(null); };
+    f.src = url;
+  }
+
+  document.getElementById("setupForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var u = document.getElementById("urlIn").value.trim();
+    if (!valid(u)) { document.getElementById("urlErr").textContent = "اللينك لازم يكون من script.google.com وآخره \u2066/exec\u2069"; return; }
+    set(u); url = u; open();
+  });
+
+  window.addEventListener("online", function(){ if (url && document.getElementById("frame").hidden) open(); });
+  window.addEventListener("offline", function(){ if (document.getElementById("frame").hidden) show("offline"); });
+
+  if (url) open(); else show("setup");
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
+  }
+})();
+</script>
+</body>
+</html>

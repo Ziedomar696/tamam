@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{
+  --bg:#F4F6F3; --surface:#FFFFFF; --surface-2:#F7F9F6; --ink:#17302A; --muted:#5E6B66; --line:#DDE5E1;
+  --brand:#1E5A4C; --brand-ink:#FFFFFF; --accent:#C99A2E;
+  --amber:#A36A12; --amber-bg:#FBEFD8; --green:#1F7A4D; --green-bg:#E1F2E8; --red:#B3261E; --red-bg:#FBE6E3; --grey-bg:#EEF1EF;
+  --radius:12px;
+  --sans:"IBM Plex Sans Arabic","Segoe UI",Tahoma,system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme:dark;
+    --bg:#0F1614; --surface:#16201D; --surface-2:#1C2824; --ink:#E6EEEA; --muted:#9DB0A8; --line:#2A3833;
+    --brand:#2E8A72; --brand-ink:#FFFFFF; --accent:#E2B957;
+    --amber:#E8B25A; --amber-bg:#35280F; --green:#5FD09A; --green-bg:#123224; --red:#F28B82; --red-bg:#3A1A17; --grey-bg:#1F2925;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6}
+[hidden]{display:none!important}
+.wrap>*,[data-v]>*,.card>*{min-width:0}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:calc(14px + env(safe-area-inset-top,0px)) 48px;display:grid;gap:16px}
+h1,h2,h3{margin:0;line-height:1.3;text-wrap:balance}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px}
+.brandline{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{width:44px;height:44px;border-radius:12px;flex:none;background:var(--brand);display:grid;place-items:center;color:#fff}
+.top h1{font-size:20px}.top p{margin:0;color:var(--muted);font-size:13px}
+.who{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chip{font-size:12px;border-radius:99px;padding:2px 10px;background:var(--surface-2);border:1px solid var(--line)}
+.chip.role{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;padding:10px 14px;color:var(--muted);font-weight:600;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+label.f{display:grid;gap:4px;font-size:12.5px;color:var(--muted);font-weight:500}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%;min-width:0}
+textarea{min-height:60px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 16px;font-weight:600}
+button.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);font-size:17px;padding:13px 16px}
+button.solid{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+button.ghost{background:transparent}
+button.bad{background:var(--red-bg);border-color:var(--red);color:var(--red)}
+button.sm{padding:5px 12px;font-size:13px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:grid;gap:14px;min-width:0}
+.card h2{font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card h3{font-size:14px}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+.bar-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.bar-row label.f{flex:1 1 150px}.bar-row .grow{flex:2 1 220px}
+.actions{display:flex;gap:10px;flex-wrap:wrap}.actions .primary{flex:1 1 200px}
+.status{font-size:13px;color:var(--muted);min-height:1.4em}
+.status.err{color:var(--red)}
+.empty{color:var(--muted);font-size:13.5px;padding:10px 0}
+.toast{position:fixed;inset-inline:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));margin:auto;max-width:420px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:60}
+.lock{min-height:100vh;display:grid;place-items:center;padding-inline:16px}
+.lock .card{width:100%;max-width:380px}
+.lock .head{display:grid;justify-items:center;gap:8px;text-align:center}
+.lock .head p{margin:0;color:var(--muted);font-size:13px}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;border-radius:99px;padding:1px 9px;white-space:nowrap}
+.p-amber{background:var(--amber-bg);color:var(--amber)}.p-green{background:var(--green-bg);color:var(--green)}
+.p-red{background:var(--red-bg);color:var(--red)}.p-grey{background:var(--grey-bg);color:var(--muted)}
+/* round banner */
+.roundbar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;background:var(--brand);color:#fff;border-radius:var(--radius);padding:14px 16px}
+.roundbar b{font-size:22px}.roundbar small{opacity:.85;font-size:13px}
+.roundbar .pill{font-size:13px;padding:3px 12px}
+/* counters */
+.counters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.counters{grid-template-columns:1fr}}
+.counter{border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;gap:6px;background:var(--surface-2)}
+.counter span{font-size:13.5px;font-weight:600;color:var(--muted)}
+.stepper{display:grid;grid-template-columns:52px minmax(0,1fr) 52px;gap:6px;align-items:center}
+.stepper button{font-size:24px;padding:4px 0;line-height:1.4}
+.stepper input{text-align:center;font-family:var(--mono);font-size:26px;font-weight:600;padding:6px 4px;direction:ltr}
+.totalbox{display:flex;justify-content:space-between;align-items:center;border:2px solid var(--brand);border-radius:12px;padding:10px 14px}
+.totalbox b{font-family:var(--mono);font-size:28px}
+.done-note{border-radius:10px;padding:10px 12px;background:var(--green-bg);color:var(--green);font-size:14px}
+/* dashboard */
+.rounds{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:900px){.rounds{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:420px){.rounds{grid-template-columns:1fr}}
+.rcard{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:4px;background:var(--surface)}
+.rcard.now{border:2px solid var(--accent)}
+.rcard .h{display:flex;justify-content:space-between;align-items:center;gap:6px;font-weight:700}
+.rcard .tot{font-family:var(--mono);font-size:30px;font-weight:600;line-height:1.2}
+.rcard .br{font-size:12.5px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.rcard .miss{font-size:12.5px;color:var(--red)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:8px 10px;text-align:start;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:var(--surface-2);color:var(--muted);font-weight:600;font-size:12px}
+tr:last-child td{border-bottom:0}
+td.cell{text-align:center;cursor:pointer;min-width:96px}
+td.cell b{font-family:var(--mono);font-size:17px;display:block;line-height:1.2}
+td.cell small{font-size:11px;color:var(--muted);font-family:var(--mono);direction:ltr;display:block}
+td.c-ok{background:var(--green-bg)}td.c-ok b{color:var(--green)}
+td.c-late{background:var(--amber-bg)}td.c-late b{color:var(--amber)}
+td.c-miss{background:var(--red-bg);color:var(--red);font-weight:600;font-size:12px}
+td.c-wait{color:var(--muted);font-size:12px}
+td.c-future{color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-inline-end:4px}
+dialog{border:1px solid var(--line);border-radius:var(--radius);padding:0;background:var(--surface);color:var(--ink);width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
+dialog::backdrop{background:rgba(8,16,13,.6)}
+dialog form,dialog .body{padding:16px;display:grid;gap:12px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px;margin:0}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.timeline{margin:0;padding-inline-start:18px;font-size:13px;display:grid;gap:4px}
+.tagset{display:flex;flex-wrap:wrap;gap:8px}
+.tagitem{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:4px 6px 4px 12px;background:var(--surface-2)}
+.tagitem.off{opacity:.6}
+.secpick{display:flex;flex-wrap:wrap;gap:6px;max-height:190px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px}
+.secpick label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:4px 8px;background:var(--surface-2);font-size:14px}
+.secpick input{width:auto}
+</style>
+</head>
+<body>
+
+<div class="lock" id="lockScreen">
+  <div class="card">
+    <div class="head">
+      <div class="logo" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="m16 11 2 2 4-4"/></svg></div>
+      <h2>تمام الملاك</h2>
+      <p id="lockSub">بيحمّل…</p>
+    </div>
+    <form id="loginForm" class="card" style="border:0;padding:0" hidden>
+      <label class="f">اسم المستخدم<input id="lgUser" autocomplete="username" autocapitalize="none" spellcheck="false" dir="ltr"></label>
+      <label class="f">كلمة السر<input id="lgPass" type="password" autocomplete="current-password" dir="ltr"></label>
+      <button class="primary" id="lgBtn">دخول</button>
+      <div class="status err" id="lgMsg" style="text-align:center"></div>
+    </form>
+    <form id="setupForm" class="card" style="border:0;padding:0" hidden>
+      <p class="hint">أول مرة: اعمل حساب الإدارة. كود التفعيل هو قيمة <b dir="ltr">SETUP_CODE</b> في ملف Code.gs.</p>
+      <label class="f">كود التفعيل<input id="suCode" autocomplete="off" dir="ltr"></label>
+      <label class="f">اسمك<input id="suName" autocomplete="name"></label>
+      <label class="f">اسم المستخدم (إنجليزي صغير)<input id="suUser" autocomplete="username" autocapitalize="none" spellcheck="false" dir="ltr" placeholder="admin"></label>
+      <label class="f">كلمة السر (٦ على الأقل)<input id="suPass" type="password" autocomplete="new-password" dir="ltr"></label>
+      <label class="f">إيميلك (لتنبيه القطاع اللي ماسلّمش)<input id="suEmail" type="email" dir="ltr" placeholder="name@gmail.com"></label>
+      <button class="primary" id="suBtn">إنشاء الحساب</button>
+      <div class="status err" id="suMsg" style="text-align:center"></div>
+    </form>
+  </div>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <header class="top">
+    <div class="brandline">
+      <div class="logo" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="m16 11 2 2 4-4"/></svg></div>
+      <div><h1>تمام الملاك</h1><p>عدد الموجودين جوه كل قطاع ٤ مرات في اليوم</p></div>
+    </div>
+    <div class="who">
+      <span class="chip role" id="meRole"></span>
+      <span id="meName" style="font-weight:600"></span>
+      <button class="sm ghost" id="pwBtn" type="button">كلمة السر</button>
+      <button class="sm ghost" id="logoutBtn" type="button">خروج</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist">
+    <button role="tab" data-view="submit">تسليم التمام</button>
+    <button role="tab" data-view="dash" data-roles="admin,manager">لوحة المتابعة</button>
+    <button role="tab" data-view="admin" data-roles="admin">المستخدمين والقطاعات</button>
+  </nav>
+
+  <!-- تسليم -->
+  <section data-v="submit" style="display:grid;gap:14px" hidden>
+    <div class="roundbar">
+      <div><small>الميعاد المفتوح دلوقتي</small><br><b id="rbLabel">—</b> <small id="rbDay"></small></div>
+      <span class="pill" id="rbState"></span>
+    </div>
+    <form class="card" id="tForm" autocomplete="off">
+      <div class="bar-row" id="mgrPick" hidden>
+        <label class="f">اليوم (للتصحيح)<input type="date" id="tDay"></label>
+        <label class="f">الميعاد<select id="tRound"></select></label>
+      </div>
+      <label class="f">القطاع<select id="tSector"></select></label>
+      <div class="done-note" id="tDone" hidden></div>
+      <div class="counters">
+        <div class="counter"><span>عدد الملاك</span><div class="stepper"><button type="button" data-d="-1" data-for="tOwners">−</button><input id="tOwners" inputmode="numeric" value="0" aria-label="عدد الملاك"><button type="button" data-d="1" data-for="tOwners">+</button></div></div>
+        <div class="counter"><span>عدد المستأجرين</span><div class="stepper"><button type="button" data-d="-1" data-for="tTenants">−</button><input id="tTenants" inputmode="numeric" value="0" aria-label="عدد المستأجرين"><button type="button" data-d="1" data-for="tTenants">+</button></div></div>
+        <div class="counter"><span>عدد المفوضين</span><div class="stepper"><button type="button" data-d="-1" data-for="tDelegates">−</button><input id="tDelegates" inputmode="numeric" value="0" aria-label="عدد المفوضين"><button type="button" data-d="1" data-for="tDelegates">+</button></div></div>
+      </div>
+      <div class="totalbox"><span>الإجمالي</span><b id="tTotal">0</b></div>
+      <label class="f">ملاحظات (اختياري)<textarea id="tNotes" placeholder="مثال: وصول عائلتين فيلا 14"></textarea></label>
+      <p class="hint">مشرف القطاع بيتسجل تلقائي من حسابك: <b id="tBy"></b></p>
+      <div class="actions"><button class="primary" id="tSave">تسليم التمام</button></div>
+      <div class="status err" id="tMsg"></div>
+    </form>
+    <div class="card">
+      <h2>تمام النهارده — قطاعاتي</h2>
+      <div id="mineTable"></div>
+    </div>
+  </section>
+
+  <!-- لوحة المتابعة -->
+  <section data-v="dash" style="display:grid;gap:14px" hidden>
+    <div class="bar-row">
+      <label class="f">يوم التمام<input type="date" id="dDay"></label>
+      <button class="sm" type="button" id="dToday">النهارده</button>
+      <span class="hint" id="dSync"></span>
+    </div>
+    <div class="rounds" id="dRounds"></div>
+    <div class="card">
+      <h2>القطاعات</h2>
+      <div class="legend"><span><i style="background:var(--green-bg)"></i>سلّم</span><span><i style="background:var(--amber-bg)"></i>سلّم متأخر</span><span><i style="background:var(--red-bg)"></i>ماسلّمش</span><span><i style="background:var(--grey-bg)"></i>لسه ميعاده ماجاش / مفتوح</span></div>
+      <div id="dTable"></div>
+      <p class="hint">اضغط على أي خانة تشوف مين سلّم وإمتى وأي تعديل حصل.</p>
+    </div>
+    <div class="card"><h2>آخر ٧ أيام (الإجمالي)</h2><div id="dWeek"></div></div>
+    <div class="card">
+      <h2>تحميل Excel</h2>
+      <div class="bar-row">
+        <label class="f">من<input type="date" id="xFrom"></label>
+        <label class="f">لحد<input type="date" id="xTo"></label>
+        <button class="solid" type="button" id="xCsv">⭳ تحميل (CSV)</button>
+        <button type="button" id="xCopy">نسخ الجدول</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- الإدارة -->
+  <section data-v="admin" style="display:grid;gap:14px" hidden>
+    <div class="card">
+      <h2>المستخدمين <button class="sm solid" id="addUserBtn" type="button" style="margin-inline-start:auto">+ مستخدم جديد</button></h2>
+      <p class="hint">«فرد أمن / مشرف قطاع»: بيسلّم تمام قطاعاته بس، في الميعاد المفتوح. «مدير»: بيشوف لوحة المتابعة لقطاعاته (أو كلها) ويقدر يصحّح أي تمام. «الإدارة»: كل حاجة.</p>
+      <div class="tablewrap"><table><thead><tr><th>الاسم</th><th>اسم المستخدم</th><th>الدور</th><th>القطاعات</th><th>الحالة</th><th>آخر دخول</th><th></th></tr></thead><tbody id="usersBody"></tbody></table></div>
+    </div>
+    <div class="card">
+      <h2>القطاعات</h2>
+      <div class="tagset" id="secList"></div>
+      <form class="bar-row" id="secForm"><label class="f grow">قطاع جديد<input id="newSec"></label><button class="solid" type="submit">إضافة</button></form>
+      <p class="hint">القطاع الموقوف بيختفي من التسليم واللوحة، بس تمامه القديم بيفضل في السجل.</p>
+    </div>
+    <form class="card" id="setForm">
+      <h2>الإعدادات</h2>
+      <div class="bar-row">
+        <label class="f">التمام يتحسب «متأخر» بعد الميعاد بكام دقيقة؟<input id="sGrace" type="number" min="0" max="240"></label>
+        <label class="f">تنبيه بالإيميل لو قطاع ماسلّمش<select id="sAlerts"><option value="1">أيوه</option><option value="0">لأ</option></select></label>
+        <button class="solid" type="submit">حفظ</button>
+      </div>
+      <p class="hint">التنبيه بيوصل للإدارة والمديرين اللي عليهم إيميل، مرة واحدة لكل ميعاد بعد ما دقايق السماح تخلص.</p>
+    </form>
+  </section>
+</div>
+
+<dialog id="cellDlg"><div class="body">
+  <div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><h2 id="cTitle"></h2><button class="sm ghost" type="button" id="cClose">إغلاق</button></div>
+  <dl class="kv" id="cKv"></dl>
+  <div id="cEditsBox"><h3 style="margin-bottom:4px">التعديلات</h3><ol class="timeline" id="cEdits"></ol></div>
+  <button class="solid" type="button" id="cFix">تصحيح التمام ده</button>
+</div></dialog>
+
+<dialog id="userDlg">
+  <form method="dialog" id="userForm">
+    <h2 id="userDlgTitle">مستخدم جديد</h2>
+    <label class="f">الاسم (ده اللي بيظهر كمشرف القطاع)<input id="uName" placeholder="مثال: علاء وحيد"></label>
+    <label class="f">اسم المستخدم (إنجليزي صغير أو أرقام)<input id="uUser" dir="ltr" autocapitalize="none" spellcheck="false" placeholder="alaa.verona"></label>
+    <label class="f">الدور<select id="uRole"></select></label>
+    <div class="f" id="uSecRow"><span>القطاعات</span>
+      <label style="display:flex;gap:8px;align-items:center" id="uAllRow"><input type="checkbox" id="uAll" style="width:auto"> كل القطاعات</label>
+      <div class="secpick" id="uSecs"></div>
+    </div>
+    <label class="f">الإيميل (اختياري — بيوصله تنبيه اللي ماسلّمش)<input id="uEmail" type="email" dir="ltr"></label>
+    <label class="f"><span id="uPassLbl">كلمة السر</span><input id="uPass" type="text" dir="ltr" autocomplete="new-password"></label>
+    <label style="display:flex;gap:8px;align-items:center" id="uActiveRow"><input type="checkbox" id="uActive" checked style="width:auto"> الحساب شغال</label>
+    <div class="status err" id="uMsg"></div>
+    <div class="actions">
+      <button class="primary" id="uSave" value="save">حفظ</button>
+      <button class="ghost" value="cancel" formnovalidate>إلغاء</button>
+      <button class="bad" type="button" id="uDelete" hidden>مسح المستخدم</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="pwDlg">
+  <form method="dialog" id="pwForm">
+    <h2>تغيير كلمة السر</h2>
+    <label class="f">كلمة السر الحالية<input id="pwOld" type="password" dir="ltr" autocomplete="current-password"></label>
+    <label class="f">كلمة السر الجديدة (٦ على الأقل)<input id="pwNew" type="password" dir="ltr" autocomplete="new-password"></label>
+    <div class="status err" id="pwMsg"></div>
+    <div class="actions"><button class="primary" value="save">حفظ</button><button class="ghost" value="cancel" formnovalidate>إلغاء</button></div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+(function(){
+  var $ = function(s){ return document.querySelector(s); };
+  var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
+  var store = { get: function(k){ try{ return localStorage.getItem(k) || ""; }catch(e){ return ""; } }, set: function(k,v){ try{ localStorage.setItem(k,v); }catch(e){} } };
+  var ROLE_LABEL = { admin:"الإدارة", manager:"مدير", guard:"فرد أمن / مشرف قطاع" };
+  var TOKEN = store.get("tm.token"), B = null, MINE = null, DASH = null;
+
+  function run(fn){
+    var args = Array.prototype.slice.call(arguments, 1);
+    var busyRe = /Lock timeout|too many simultaneous|invoked too many times|Service Spreadsheets timed out|try again later/i;
+    function attempt(n){
+      return new Promise(function(res, rej){
+        var r = google.script.run.withSuccessHandler(res).withFailureHandler(function(e){
+          var m = (e && e.message) || String(e || "");
+          if(n < 3 && busyRe.test(m)) setTimeout(function(){ attempt(n + 1).then(res, rej); }, 1200 * n + Math.random() * 1500);
+          else rej(e);
+        });
+        r[fn].apply(r, args);
+      });
+    }
+    return attempt(1);
+  }
+  function errMsg(e){
+    var m = (e && e.message) || String(e || "");
+    if(/\bAUTH\b/.test(m)){ logout(); return "انتهت الجلسة. سجّل دخول تاني."; }
+    return m.replace(/^(Exception|Error):\s*/, "") || "حصلت مشكلة. جرّب تاني.";
+  }
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+  function bd(s){ return "<bdi>" + esc(s) + "</bdi>"; }
+  function fmt(n){ return Number(n||0).toLocaleString("en-US"); }
+  var toastT;
+  function toast(msg){ var t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(function(){ t.hidden = true; }, 3800); }
+  function busy(btn, on, label){ btn.disabled = on; if(label) btn.textContent = label; }
+  function options(sel, list, cur){ sel.innerHTML = list.map(function(v){ return '<option value="'+esc(v)+'">⁨'+esc(v)+'⁩</option>'; }).join(""); if(list.indexOf(cur) >= 0) sel.value = cur; }
+  var WD = ["الأحد","الاتنين","التلات","الأربع","الخميس","الجمعة","السبت"];
+  function dayLabel(k){ var p = k.split("-").map(Number); var d = new Date(Date.UTC(p[0], p[1]-1, p[2])); return WD[d.getUTCDay()] + " " + p[2] + "/" + p[1]; }
+  function hm(stamp){ return String(stamp || "").slice(11, 16); }
+  function rLabel(k){ return (B.rounds.filter(function(r){ return r.key === k; })[0] || {}).label || k; }
+  function csvDownload(rows, name){
+    var csv = "﻿" + rows.map(function(r){ return r.map(function(c){ c = String(c == null ? "" : c); return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(","); }).join("\r\n");
+    var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    a.download = name + ".csv"; document.body.appendChild(a); a.click(); a.remove();
+    toast("لو التحميل ما بدأش، استخدم «نسخ الجدول» والصقه في Excel.");
+  }
+  function copyRows(rows){
+    var t = document.createElement("textarea"); t.value = rows.map(function(r){ return r.map(function(c){ return String(c == null ? "" : c).replace(/[\t\n]/g, " "); }).join("\t"); }).join("\n");
+    t.style.position = "fixed"; t.style.opacity = "0"; document.body.appendChild(t); t.select(); var ok = false; try{ ok = document.execCommand("copy"); }catch(e){} t.remove();
+    toast(ok ? "اتنسخ " + (rows.length - 1) + " سطر. الصقه في Excel." : "المتصفح منع النسخ.");
+  }
+
+  // ================================================================ login
+  function showLock(mode){
+    $("#app").hidden = true; $("#lockScreen").hidden = false;
+    $("#loginForm").hidden = mode !== "login"; $("#setupForm").hidden = mode !== "setup";
+    $("#lockSub").textContent = mode === "setup" ? "تجهيز أول مرة" : mode === "login" ? "سجّل دخول بحسابك" : "بيحمّل…";
+  }
+  function logout(){
+    TOKEN = ""; B = null; store.set("tm.token", ""); $("#lgPass").value = "";
+    $$("dialog").forEach(function(d){ if(d.open) d.close(); });
+    run("needsSetup").then(function(n){ showLock(n ? "setup" : "login"); }).catch(function(){ showLock("login"); });
+  }
+  function signedIn(r){ if(r.token){ TOKEN = r.token; store.set("tm.token", TOKEN); } B = r; start(); }
+  $("#loginForm").addEventListener("submit", function(e){
+    e.preventDefault(); var u = $("#lgUser").value.trim(), p = $("#lgPass").value;
+    if(!u || !p){ $("#lgMsg").textContent = "اكتب اسم المستخدم وكلمة السر."; return; }
+    busy($("#lgBtn"), true); $("#lgMsg").textContent = "";
+    run("login", u, p).then(signedIn).catch(function(err){ $("#lgMsg").textContent = errMsg(err); }).then(function(){ busy($("#lgBtn"), false); });
+  });
+  $("#setupForm").addEventListener("submit", function(e){
+    e.preventDefault(); busy($("#suBtn"), true); $("#suMsg").textContent = "";
+    run("setupAdmin", $("#suCode").value.trim(), $("#suUser").value.trim().toLowerCase(), $("#suName").value.trim(), $("#suPass").value, $("#suEmail").value.trim())
+      .then(function(r){ signedIn(r); toast("اتعمل الحساب. ضيف القطاعات والمستخدمين."); showView("admin"); })
+      .catch(function(err){ $("#suMsg").textContent = errMsg(err); }).then(function(){ busy($("#suBtn"), false); });
+  });
+  $("#logoutBtn").addEventListener("click", logout);
+  $("#pwBtn").addEventListener("click", function(){ $("#pwOld").value = ""; $("#pwNew").value = ""; $("#pwMsg").textContent = ""; $("#pwDlg").showModal(); });
+  $("#pwForm").addEventListener("submit", function(e){
+    if(e.submitter && e.submitter.value === "cancel") return; e.preventDefault();
+    run("changeMyPassword", TOKEN, $("#pwOld").value, $("#pwNew").value).then(function(t){ TOKEN = t; store.set("tm.token", t); $("#pwDlg").close(); toast("اتغيرت كلمة السر."); })
+      .catch(function(err){ $("#pwMsg").textContent = errMsg(err); });
+  });
+
+  // ================================================================ views
+  function showView(v){
+    $$("#tabs button").forEach(function(b){ b.setAttribute("aria-selected", String(b.getAttribute("data-view") === v)); });
+    $$("[data-v]").forEach(function(s){ s.hidden = s.getAttribute("data-v") !== v; });
+    ({ submit: loadMine, dash: function(){ loadDash(); }, admin: loadAdmin }[v] || function(){})();
+  }
+  $("#tabs").addEventListener("click", function(e){ var b = e.target.closest("button[data-view]"); if(b) showView(b.getAttribute("data-view")); });
+  var timer;
+  function start(){
+    $("#lockScreen").hidden = true; $("#app").hidden = false;
+    $("#meName").textContent = B.me.name; $("#meRole").textContent = ROLE_LABEL[B.me.role]; $("#tBy").textContent = B.me.name;
+    var vis = 0;
+    $$("#tabs button").forEach(function(b){ var r = b.getAttribute("data-roles"); var ok = !r || r.split(",").indexOf(B.me.role) >= 0; b.hidden = !ok; if(ok) vis++; });
+    $("#tabs").hidden = vis < 2;
+    $("#mgrPick").hidden = B.me.role === "guard";
+    $("#tRound").innerHTML = B.rounds.map(function(r){ return '<option value="'+r.key+'">'+esc(r.label)+'</option>'; }).join("");
+    options($("#tSector"), B.sectors, store.get("tm.sector"));
+    showView(B.me.role === "guard" ? "submit" : "dash");
+    clearInterval(timer);
+    timer = setInterval(function(){ if(document.hidden) return; if(!$("[data-v=dash]").hidden) loadDash(true); else if(!$("[data-v=submit]").hidden) loadMine(true); }, 60000);
+  }
+
+  // ================================================================ تسليم
+  function nums(){ return ["tOwners","tTenants","tDelegates"].map(function(id){ var v = String($("#"+id).value).replace(/[٠-٩]/g, function(d){ return "٠١٢٣٤٥٦٧٨٩".indexOf(d); }).replace(/\D/g, ""); return v === "" ? NaN : Number(v); }); }
+  function total(){ var n = nums(); $("#tTotal").textContent = n.some(isNaN) ? "—" : fmt(n[0] + n[1] + n[2]); }
+  $$(".stepper button").forEach(function(b){ b.addEventListener("click", function(){ var i = $("#" + b.getAttribute("data-for")); var v = Number(String(i.value).replace(/\D/g, "")) || 0; i.value = Math.max(0, v + Number(b.getAttribute("data-d"))); total(); }); });
+  ["tOwners","tTenants","tDelegates"].forEach(function(id){ $("#"+id).addEventListener("input", total); $("#"+id).addEventListener("focus", function(){ this.select(); }); });
+  function target(){ // اليوم والميعاد اللي بيتسلّم
+    if(B.me.role !== "guard" && $("#tDay").value) return { day: $("#tDay").value, round: $("#tRound").value };
+    return { day: MINE.current.day, round: MINE.current.key };
+  }
+  function fillForm(){
+    if(!MINE) return;
+    var t = target(), sec = $("#tSector").value;
+    var row = (MINE.rows || []).concat(MINE.extra || []).filter(function(r){ return r.day === t.day && r.round === t.round && r.sector === sec; })[0];
+    var box = $("#tDone");
+    if(row){
+      box.hidden = false; box.textContent = "✓ اتسلّم تمام " + rLabel(t.round) + " لقطاع " + sec + " الساعة " + hm(row.at) + " (" + row.by + ")" + (row.edited ? " · آخر تعديل: " + row.edited.replace(/\s*\d{4}-\d{2}-\d{2} (\d{2}:\d{2})/, " الساعة $1") : "") + ". لو عدّلت الأرقام، التعديل بيتسجل.";
+      $("#tOwners").value = row.owners; $("#tTenants").value = row.tenants; $("#tDelegates").value = row.delegates; $("#tNotes").value = row.notes;
+      $("#tSave").textContent = "حفظ التعديل";
+    } else {
+      box.hidden = true; ["tOwners","tTenants","tDelegates"].forEach(function(id){ $("#"+id).value = 0; }); $("#tNotes").value = "";
+      $("#tSave").textContent = "تسليم التمام";
+    }
+    total();
+  }
+  function drawMine(s){
+    MINE = s;
+    var c = s.current;
+    $("#rbLabel").textContent = "تمام " + c.label; $("#rbDay").textContent = "· يوم " + dayLabel(c.day);
+    var lateNow = new Date() > parseCairo(c.lateAfter);
+    $("#rbState").className = "pill " + (lateNow ? "p-amber" : "p-green"); $("#rbState").textContent = lateNow ? "عدّى ميعاده — اللي هيتسلّم هيتحسب متأخر" : "مفتوح لحد " + hm(c.lateAfter);
+    if(!$("#tDay").value) $("#tDay").value = c.day;
+    if(document.activeElement && document.activeElement.closest && document.activeElement.closest("#tForm")){} else fillForm();
+    // جدول النهارده
+    var keys = B.rounds.map(function(r){ return r.key; });
+    $("#mineTable").innerHTML = s.sectors.length ? '<div class="tablewrap"><table><thead><tr><th>القطاع</th>' + B.rounds.map(function(r){ return "<th>"+esc(r.label)+"</th>"; }).join("") + "</tr></thead><tbody>" +
+      s.sectors.map(function(sec){ return "<tr><td>"+bd(sec)+"</td>" + keys.map(function(k){ var r = s.rows.filter(function(x){ return x.sector === sec && x.round === k; })[0];
+        return r ? '<td class="cell '+(r.late ? "c-late" : "c-ok")+'"><b>'+r.total+'</b><small>'+hm(r.at)+'</small></td>' : '<td class="cell c-future">—</td>'; }).join("") + "</tr>"; }).join("") + "</tbody></table></div>"
+      : '<div class="empty">حسابك مش على أي قطاع. كلّم الإدارة.</div>';
+  }
+  function parseCairo(stamp){ return new Date(String(stamp).replace(" ", "T") + ":00" + cairoOffset()); }
+  function cairoOffset(){ try{ var p = new Intl.DateTimeFormat("en-US",{ timeZone:"Africa/Cairo", timeZoneName:"shortOffset" }).formatToParts(new Date()).filter(function(x){ return x.type === "timeZoneName"; })[0].value; var m = p.match(/GMT([+-]\d+)/); var h = m ? Number(m[1]) : 2; return (h < 0 ? "-" : "+") + ("0" + Math.abs(h)).slice(-2) + ":00"; }catch(e){ return "+02:00"; } }
+  function loadMine(quiet){ run("myState", TOKEN).then(drawMine).catch(function(err){ if(!quiet) toast(errMsg(err)); }); }
+  $("#tSector").addEventListener("change", function(){ store.set("tm.sector", this.value); fillForm(); });
+  function loadExtra(){ // المدير بيصحّح يوم قديم: نجيب تمام اليوم ده
+    var t = target(); if(!MINE || t.day === MINE.current.day){ if(MINE) MINE.extra = []; fillForm(); return; }
+    run("dashboard", TOKEN, t.day).then(function(d){ var out = []; Object.keys(d.cells).forEach(function(s){ Object.keys(d.cells[s]).forEach(function(k){ out.push(d.cells[s][k]); }); }); MINE.extra = out; fillForm(); }).catch(function(err){ toast(errMsg(err)); });
+  }
+  $("#tDay").addEventListener("change", loadExtra); $("#tRound").addEventListener("change", loadExtra);
+  $("#tForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var n = nums(); if(n.some(isNaN)){ $("#tMsg").textContent = "اكتب الأعداد التلاتة (صفر لو مفيش)."; return; }
+    if(!$("#tSector").value){ $("#tMsg").textContent = "اختار القطاع."; return; }
+    var t = target();
+    var d = { sector: $("#tSector").value, owners: n[0], tenants: n[1], delegates: n[2], notes: $("#tNotes").value.trim(), round: t.round };
+    if(B.me.role !== "guard"){ d.day = t.day; }
+    var b = $("#tSave"), lbl = b.textContent; busy(b, true, "بيسلّم…"); $("#tMsg").textContent = "";
+    run("submitTamam", TOKEN, d).then(function(r){
+      toast(r.same ? "مفيش تغيير." : r.edited ? "اتحفظ التعديل واتسجل." : r.late ? "اتسلّم التمام (متأخر)." : "اتسلّم التمام ✓");
+      document.activeElement && document.activeElement.blur && document.activeElement.blur();
+      drawMine(r.state); if(t.day !== r.state.current.day || t.round !== r.state.current.key) loadExtra(); else fillForm();
+    }).catch(function(err){ $("#tMsg").textContent = errMsg(err); }).then(function(){ busy(b, false); fillForm(); });
+  });
+
+  // ================================================================ لوحة المتابعة
+  function loadDash(quiet){
+    run("dashboard", TOKEN, $("#dDay").value || "").then(drawDash).catch(function(err){ if(!quiet) toast(errMsg(err)); });
+  }
+  $("#dDay").addEventListener("change", function(){ loadDash(); });
+  $("#dToday").addEventListener("click", function(){ $("#dDay").value = ""; loadDash(); });
+  function drawDash(d){
+    DASH = d;
+    if(!$("#dDay").value) $("#dDay").value = d.day;
+    if(!$("#xFrom").value){ $("#xFrom").value = d.week[0].day; $("#xTo").value = d.day; }
+    $("#dSync").textContent = "آخر تحديث " + new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
+    var isToday = d.day === d.today;
+    $("#dRounds").innerHTML = d.rounds.map(function(r){
+      var now = isToday && r.key === d.current.key;
+      var st = r.state === "future" ? '<span class="pill p-grey">لسه</span>' : r.missing.length ? (r.state === "due" ? '<span class="pill p-red">ناقص ' + r.missing.length + '</span>' : '<span class="pill p-amber">مفتوح</span>') : '<span class="pill p-green">كامل</span>';
+      return '<div class="rcard'+(now ? " now" : "")+'"><div class="h"><span>'+esc(r.label)+'</span>'+st+'</div>' +
+        '<div class="tot">'+(r.done ? fmt(r.total) : "—")+'</div>' +
+        '<div class="br"><span>ملاك '+fmt(r.owners)+'</span><span>مستأجرين '+fmt(r.tenants)+'</span><span>مفوضين '+fmt(r.delegates)+'</span></div>' +
+        '<div class="br"><span>سلّم '+r.done+' من '+d.sectors.length+'</span></div>' +
+        (r.missing.length && r.state !== "future" ? '<div class="miss">'+(r.state === "due" ? "ماسلّمش: " : "لسه: ")+r.missing.map(bd).join("، ")+'</div>' : "") + '</div>';
+    }).join("");
+    var head = '<tr><th>القطاع</th>' + d.rounds.map(function(r){ return "<th>"+esc(r.label)+"</th>"; }).join("") + "</tr>";
+    var body = d.sectors.map(function(s){
+      return "<tr><td>"+bd(s)+"</td>" + d.rounds.map(function(r){
+        var x = (d.cells[s] || {})[r.key];
+        if(x) return '<td class="cell '+(x.late ? "c-late" : "c-ok")+'" data-s="'+esc(s)+'" data-r="'+r.key+'"><b>'+x.total+'</b><small>'+x.owners+' · '+x.tenants+' · '+x.delegates+'</small></td>';
+        if(r.state === "due") return '<td class="cell c-miss" data-s="'+esc(s)+'" data-r="'+r.key+'">ماسلّمش</td>';
+        return '<td class="cell '+(r.state === "open" ? "c-wait" : "c-future")+'">'+(r.state === "open" ? "مستني" : "")+'</td>';
+      }).join("") + "</tr>";
+    }).join("");
+    var tot = "<tr><th>الإجمالي</th>" + d.rounds.map(function(r){ return '<th style="text-align:center">'+(r.done ? fmt(r.total) : "—")+"</th>"; }).join("") + "</tr>";
+    $("#dTable").innerHTML = '<div class="tablewrap"><table><thead>'+head+'</thead><tbody>'+body+'</tbody><tfoot>'+tot+'</tfoot></table></div><p class="hint">الأرقام الصغيرة: ملاك · مستأجرين · مفوضين</p>';
+    $("#dWeek").innerHTML = '<div class="tablewrap"><table><thead><tr><th>اليوم</th>' + d.rounds.map(function(r){ return "<th>"+esc(r.label)+"</th>"; }).join("") + "</tr></thead><tbody>" +
+      d.week.slice().reverse().map(function(w){ return "<tr><td>"+esc(dayLabel(w.day))+"</td>" + d.rounds.map(function(r){ return '<td class="num">'+(w[r.key] == null ? "—" : fmt(w[r.key]))+"</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table></div>";
+  }
+  var CELL = null;
+  $("#dTable").addEventListener("click", function(e){
+    var td = e.target.closest("td[data-s]"); if(!td) return;
+    var s = td.getAttribute("data-s"), k = td.getAttribute("data-r"), x = (DASH.cells[s] || {})[k];
+    CELL = { s: s, k: k, day: DASH.day };
+    $("#cTitle").textContent = "تمام " + rLabel(k) + " — " + s + " — " + dayLabel(DASH.day);
+    $("#cKv").innerHTML = x ? "<dt>ملاك</dt><dd>"+x.owners+"</dd><dt>مستأجرين</dt><dd>"+x.tenants+"</dd><dt>مفوضين</dt><dd>"+x.delegates+"</dd><dt>الإجمالي</dt><dd><b>"+x.total+"</b></dd><dt>مشرف القطاع</dt><dd>"+esc(x.by)+"</dd><dt>وقت التسليم</dt><dd><span class=\"num\">"+esc(x.at)+"</span>"+(x.late ? ' <span class="pill p-amber">متأخر</span>' : "")+"</dd>"+(x.notes ? "<dt>ملاحظات</dt><dd>"+esc(x.notes)+"</dd>" : "")
+      : '<dt>الحالة</dt><dd><span class="pill p-red">ماسلّمش</span></dd>';
+    $("#cEdits").innerHTML = '<li>بيحمّل…</li>'; $("#cEditsBox").hidden = !x;
+    $("#cellDlg").showModal();
+    if(x) run("cellDetail", TOKEN, DASH.day, k, s).then(function(r){ $("#cEdits").innerHTML = r.edits.map(function(e){ return '<li><span class="num">'+esc(e.at)+'</span> — '+esc(e.by)+': من <b class="num">'+esc(e.before)+'</b> لـ <b class="num">'+esc(e.after)+'</b></li>'; }).join("") || "<li>مفيش تعديلات</li>"; }).catch(function(){});
+  });
+  $("#cClose").addEventListener("click", function(){ $("#cellDlg").close(); });
+  $("#cFix").addEventListener("click", function(){
+    $("#cellDlg").close(); showView("submit");
+    $("#tDay").value = CELL.day; $("#tRound").value = CELL.k; $("#tSector").value = CELL.s; loadExtra();
+    toast("صحّح الأرقام ودوس «حفظ التعديل»."); window.scrollTo(0, 0);
+  });
+  function exp(then){
+    run("exportRange", TOKEN, $("#xFrom").value, $("#xTo").value).then(then).catch(function(err){ toast(errMsg(err)); });
+  }
+  $("#xCsv").addEventListener("click", function(){ exp(function(rows){ csvDownload(rows, "تمام_الملاك_" + $("#xFrom").value + "_" + $("#xTo").value); }); });
+  $("#xCopy").addEventListener("click", function(){ exp(copyRows); });
+
+  // ================================================================ الإدارة
+  var AD = null, editUser = null, delU = false;
+  function loadAdmin(){ run("adminData", TOKEN).then(function(d){ AD = d; drawAdmin(); }).catch(function(err){ toast(errMsg(err)); }); }
+  function secLabel(u){ return u.role === "admin" || u.sectors.indexOf("*") >= 0 ? "كل القطاعات" : u.sectors.map(bd).join("، "); }
+  function drawAdmin(){
+    $("#usersBody").innerHTML = AD.users.map(function(u){ return "<tr><td>"+esc(u.name)+"</td><td class=\"num\">"+esc(u.username)+"</td><td>"+esc(ROLE_LABEL[u.role])+"</td><td>"+secLabel(u)+"</td><td>"+(u.active ? '<span class="pill p-green">شغال</span>' : '<span class="pill p-red">موقوف</span>')+"</td><td class=\"num\">"+esc(u.lastLogin || "—")+'</td><td><button class="sm" type="button" data-u="'+esc(u.username)+'">تعديل</button></td></tr>'; }).join("");
+    $("#secList").innerHTML = AD.sectors.map(function(s){ return '<span class="tagitem'+(s.active ? "" : " off")+'"><b>'+bd(s.name)+'</b><button class="sm" type="button" data-sec="'+esc(s.name)+'" data-on="'+(s.active ? "0" : "1")+'">'+(s.active ? "إيقاف" : "تشغيل")+'</button></span>'; }).join("");
+    $("#sGrace").value = AD.settings.grace; $("#sAlerts").value = AD.settings.alerts ? "1" : "0";
+  }
+  function afterAdmin(d){ AD = d; drawAdmin(); run("whoami", TOKEN).then(function(r){ B = r; options($("#tSector"), B.sectors, $("#tSector").value); }); }
+  $("#secList").addEventListener("click", function(e){ var b = e.target.closest("button[data-sec]"); if(!b) return; busy(b, true); run("saveSector", TOKEN, b.getAttribute("data-sec"), b.getAttribute("data-on") === "1").then(afterAdmin).catch(function(err){ toast(errMsg(err)); busy(b, false); }); });
+  $("#secForm").addEventListener("submit", function(e){ e.preventDefault(); var v = $("#newSec").value.trim(); if(!v) return; run("saveSector", TOKEN, v, true).then(function(d){ $("#newSec").value = ""; toast("اتضاف قطاع " + v); afterAdmin(d); }).catch(function(err){ toast(errMsg(err)); }); });
+  $("#setForm").addEventListener("submit", function(e){ e.preventDefault(); run("saveSettings", TOKEN, { grace: $("#sGrace").value, alerts: $("#sAlerts").value === "1" }).then(function(d){ AD = d; drawAdmin(); toast("اتحفظت الإعدادات."); }).catch(function(err){ toast(errMsg(err)); }); });
+  $("#uRole").innerHTML = ["guard","manager","admin"].map(function(k){ return '<option value="'+k+'">'+esc(ROLE_LABEL[k])+'</option>'; }).join("");
+  function drawSecs(sel){
+    var role = $("#uRole").value;
+    $("#uSecRow").hidden = role === "admin"; $("#uAllRow").hidden = role !== "manager";
+    var all = role === "manager" && sel.indexOf("*") >= 0; $("#uAll").checked = all;
+    $("#uSecs").innerHTML = AD.sectors.filter(function(s){ return s.active || sel.indexOf(s.name) >= 0; }).map(function(s){ return '<label><input type="checkbox" value="'+esc(s.name)+'"'+(sel.indexOf(s.name) >= 0 ? " checked" : "")+'> '+bd(s.name)+'</label>'; }).join("");
+    $("#uSecs").hidden = all;
+  }
+  $("#uRole").addEventListener("change", function(){ drawSecs(pickedSecs()); });
+  $("#uAll").addEventListener("change", function(){ $("#uSecs").hidden = this.checked; });
+  function pickedSecs(){ if($("#uRole").value === "manager" && $("#uAll").checked) return ["*"]; return $$("#uSecs input").filter(function(i){ return i.checked; }).map(function(i){ return i.value; }); }
+  function openUser(u){
+    editUser = u || null; delU = false;
+    $("#userDlgTitle").textContent = u ? "تعديل: " + u.name : "مستخدم جديد";
+    $("#uName").value = u ? u.name : ""; $("#uUser").value = u ? u.username : ""; $("#uUser").readOnly = !!u;
+    $("#uRole").value = u ? u.role : "guard"; $("#uEmail").value = u ? (u.email || "") : "";
+    $("#uPass").value = ""; $("#uPass").placeholder = u ? "سيبها فاضية لو مش هتغيّرها" : "٦ حروف أو أرقام على الأقل"; $("#uPassLbl").textContent = u ? "كلمة سر جديدة (اختياري)" : "كلمة السر";
+    $("#uActive").checked = u ? u.active : true; $("#uActiveRow").hidden = !u;
+    $("#uDelete").hidden = !u || u.username === B.me.username; $("#uDelete").textContent = "مسح المستخدم";
+    drawSecs(u ? u.sectors : []); $("#uMsg").textContent = ""; $("#userDlg").showModal();
+  }
+  $("#addUserBtn").addEventListener("click", function(){ openUser(null); });
+  $("#usersBody").addEventListener("click", function(e){ var b = e.target.closest("button[data-u]"); if(b) openUser(AD.users.filter(function(u){ return u.username === b.getAttribute("data-u"); })[0]); });
+  $("#userForm").addEventListener("submit", function(e){
+    if(e.submitter && e.submitter.value === "cancel") return; e.preventDefault();
+    var d = { isNew: !editUser, username: $("#uUser").value.trim().toLowerCase(), name: $("#uName").value.trim(), role: $("#uRole").value, sectors: pickedSecs(), email: $("#uEmail").value.trim(), password: $("#uPass").value, active: editUser ? $("#uActive").checked : true };
+    var b = $("#uSave"); busy(b, true, "بيحفظ…"); $("#uMsg").textContent = "";
+    run("saveUser", TOKEN, d).then(function(res){ AD = res; drawAdmin(); $("#userDlg").close(); toast(editUser ? "اتحفظ التعديل." : "اتعمل المستخدم " + d.username + ". ابعتله اسم المستخدم وكلمة السر."); })
+      .catch(function(err){ $("#uMsg").textContent = errMsg(err); }).then(function(){ busy(b, false, "حفظ"); });
+  });
+  $("#uDelete").addEventListener("click", function(){
+    var b = $("#uDelete"); if(!delU){ delU = true; b.textContent = "اضغط تاني للتأكيد"; return; }
+    busy(b, true); run("deleteUser", TOKEN, editUser.username).then(function(res){ AD = res; drawAdmin(); $("#userDlg").close(); toast("اتمسح المستخدم."); }).catch(function(err){ $("#uMsg").textContent = errMsg(err); }).then(function(){ busy(b, false, "مسح المستخدم"); delU = false; });
+  });
+
+  // ================================================================ boot
+  if(TOKEN) run("whoami", TOKEN).then(signedIn).catch(function(){ logout(); });
+  else run("needsSetup").then(function(n){ showLock(n ? "setup" : "login"); }).catch(function(err){ showLock("login"); $("#lgMsg").textContent = errMsg(err); });
+})();
+</script>
+</body>
+</html>
