@@ -644,10 +644,11 @@ function dashboard(token, day) {
     const got = rows.filter(function (x) { return x.round === r.key; });
     const sum = function (f) { return got.reduce(function (a, x) { return a + x[f]; }, 0); };
     const sumT = function (t) { return got.reduce(function (a, x) { return a + x[t].total; }, 0); };
+    const split = function (t) { const o = {}; ['owners', 'tenants', 'delegates'].forEach(function (f) { o[f] = got.reduce(function (a, x) { return a + x[t][f]; }, 0); }); return o; };
     const sched = schedOf_(day, r).getTime();
     const state = now < sched - EARLY_MIN * 60000 ? 'future' : now < sched + grace ? 'open' : 'due';
     return { key: r.key, label: r.label, at: stamp_(new Date(sched)), state: state,
-      owners: sum('owners'), tenants: sum('tenants'), delegates: sum('delegates'), total: sum('total'), villas: sumT('v'), apts: sumT('a'),
+      owners: sum('owners'), tenants: sum('tenants'), delegates: sum('delegates'), total: sum('total'), villas: sumT('v'), apts: sumT('a'), v: split('v'), a: split('a'),
       done: got.length, missing: state === 'future' ? [] : secs.filter(function (s) { return !got.some(function (x) { return x.sector === s; }); }) };
   });
   const cells = {};

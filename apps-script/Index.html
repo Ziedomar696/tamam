@@ -104,6 +104,12 @@ table.mini{font-size:13px}table.mini td,table.mini th{padding:5px 8px;text-align
 .rcard .h{display:flex;justify-content:space-between;align-items:center;gap:6px;font-weight:700}
 .rcard .tot{font-family:var(--mono);font-size:30px;font-weight:600;line-height:1.2}
 .rcard .br{font-size:12.5px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.rsplit{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+.rsplit th,.rsplit td{padding:3px 4px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+.rsplit thead th{color:var(--muted);font-weight:600;font-size:11.5px;background:transparent}
+.rsplit tbody th{text-align:start;color:var(--muted);font-weight:600;background:transparent}
+.rsplit td{font-family:var(--mono)}
+.rsplit tr.tt th,.rsplit tr.tt td{border-bottom:0;border-top:1px solid var(--line)}
 .rcard .miss{font-size:12.5px;color:var(--red)}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
 table{border-collapse:collapse;width:100%;font-size:13.5px}
@@ -550,8 +556,9 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
       var st = r.state === "future" ? '<span class="pill p-grey">لسه</span>' : r.missing.length ? (r.state === "due" ? '<span class="pill p-red">ناقص ' + r.missing.length + '</span>' : '<span class="pill p-amber">مفتوح</span>') : '<span class="pill p-green">كامل</span>';
       return '<div class="rcard'+(now ? " now" : "")+'"><div class="h"><span>'+esc(r.label)+'</span>'+st+'</div>' +
         '<div class="tot">'+(r.done ? fmt(r.total) : "—")+'</div>' +
-        '<div class="br"><span>فيلات <b>'+fmt(r.villas)+'</b></span><span>شقق <b>'+fmt(r.apts)+'</b></span></div>' +
-        '<div class="br"><span>ملاك '+fmt(r.owners)+'</span><span>مستأجرين '+fmt(r.tenants)+'</span><span>مفوضين '+fmt(r.delegates)+'</span></div>' +
+        '<table class="rsplit"><thead><tr><th></th><th>فيلات</th><th>شقق</th><th>الإجمالي</th></tr></thead><tbody>' +
+          [["owners","ملاك"],["tenants","مستأجرين"],["delegates","مفوضين"]].map(function(f){ return '<tr><th>'+f[1]+'</th><td>'+fmt(r.v[f[0]])+'</td><td>'+fmt(r.a[f[0]])+'</td><td><b>'+fmt(r[f[0]])+'</b></td></tr>'; }).join("") +
+          '<tr class="tt"><th>الإجمالي</th><td><b>'+fmt(r.villas)+'</b></td><td><b>'+fmt(r.apts)+'</b></td><td><b>'+fmt(r.total)+'</b></td></tr></tbody></table>' +
         '<div class="br"><span>سلّم '+r.done+' من '+d.sectors.length+'</span></div>' +
         (r.missing.length && r.state !== "future" ? '<div class="miss">'+(r.state === "due" ? "ماسلّمش: " : "لسه: ")+r.missing.map(bd).join("، ")+'</div>' : "") + '</div>';
     }).join("");
