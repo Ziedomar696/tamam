@@ -179,8 +179,8 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
 
   <nav class="tabs" id="tabs" role="tablist">
     <button role="tab" data-view="submit">تسليم التمام</button>
-    <button role="tab" data-view="dash" data-roles="admin,manager">لوحة المتابعة</button>
-    <button role="tab" data-view="admin" data-roles="admin">المستخدمين والقطاعات</button>
+    <button role="tab" data-view="dash" data-roles="admin,site,manager">لوحة المتابعة</button>
+    <button role="tab" data-view="admin" data-roles="admin,site" id="adminTab">المستخدمين والقطاعات</button>
   </nav>
 
   <!-- تسليم -->
@@ -238,11 +238,11 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
   <!-- الإدارة -->
   <section data-v="admin" style="display:grid;gap:14px" hidden>
     <div class="card">
-      <h2>المستخدمين <button class="sm solid" id="addUserBtn" type="button" style="margin-inline-start:auto">+ مستخدم جديد</button></h2>
-      <p class="hint">«فرد أمن / مشرف قطاع»: بيسلّم تمام قطاعاته بس، في الميعاد المفتوح. «مدير»: بيشوف لوحة المتابعة لقطاعاته (أو كلها) ويقدر يصحّح أي تمام. «الإدارة»: كل حاجة.</p>
+      <h2><span id="usersTitle">المستخدمين</span> <button class="sm solid" id="addUserBtn" type="button" style="margin-inline-start:auto">+ مستخدم جديد</button></h2>
+      <p class="hint" id="usersHint">«فرد أمن / مشرف قطاع»: بيسلّم تمام قطاعاته بس، في الميعاد المفتوح. «مدير»: بيشوف لوحة المتابعة لقطاعاته (أو كلها) ويقدر يصحّح أي تمام. «مدير الموقع»: زي المدير، وكمان بيضيف ويعدّل مشرفين القطاعات في قطاعاته. «الإدارة»: كل حاجة.</p>
       <div class="tablewrap"><table><thead><tr><th>الاسم</th><th>اسم المستخدم</th><th>الدور</th><th>القطاعات</th><th>الحالة</th><th>آخر دخول</th><th></th></tr></thead><tbody id="usersBody"></tbody></table></div>
     </div>
-    <div class="card">
+    <div class="card" id="secCard">
       <h2>القطاعات</h2>
       <div class="tagset" id="secList"></div>
       <form class="bar-row" id="secForm"><label class="f grow">قطاع جديد<input id="newSec"></label><label class="f">الوحدات<select id="newSecType"><option value="va">فيلات وشقق</option><option value="v">فيلات بس</option><option value="a">شقق بس</option></select></label><button class="solid" type="submit">إضافة</button></form>
@@ -313,7 +313,7 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
   var $ = function(s){ return document.querySelector(s); };
   var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
   var store = { get: function(k){ try{ return localStorage.getItem(k) || ""; }catch(e){ return ""; } }, set: function(k,v){ try{ localStorage.setItem(k,v); }catch(e){} } };
-  var ROLE_LABEL = { admin:"الإدارة", manager:"مدير", guard:"فرد أمن / مشرف قطاع" };
+  var ROLE_LABEL = { admin:"الإدارة", site:"مدير الموقع", manager:"مدير", guard:"فرد أمن / مشرف قطاع" };
   var TOKEN = store.get("tm.token"), B = null, MINE = null, DASH = null;
 
   function run(fn){
@@ -405,6 +405,7 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     var vis = 0;
     $$("#tabs button").forEach(function(b){ var r = b.getAttribute("data-roles"); var ok = !r || r.split(",").indexOf(B.me.role) >= 0; b.hidden = !ok; if(ok) vis++; });
     $("#tabs").hidden = vis < 2;
+    $("#adminTab").textContent = B.me.role === "site" ? "مشرفين القطاعات" : "المستخدمين والقطاعات";
     $("#mgrPick").hidden = B.me.role === "guard";
     $("#tRound").innerHTML = B.rounds.map(function(r){ return '<option value="'+r.key+'">'+esc(r.label)+'</option>'; }).join("");
     options($("#tSector"), B.sectors, store.get("tm.sector"));
@@ -571,6 +572,13 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     $("#usersBody").innerHTML = AD.users.map(function(u){ return "<tr><td>"+esc(u.name)+"</td><td class=\"num\">"+esc(u.username)+"</td><td>"+esc(ROLE_LABEL[u.role])+"</td><td>"+secLabel(u)+"</td><td>"+(u.active ? '<span class="pill p-green">شغال</span>' : '<span class="pill p-red">موقوف</span>')+"</td><td class=\"num\">"+esc(u.lastLogin || "—")+'</td><td><button class="sm" type="button" data-u="'+esc(u.username)+'">تعديل</button></td></tr>'; }).join("");
     var tsel = function(s){ var v = s.types.join(""); return '<select data-sectype="'+esc(s.name)+'" aria-label="وحدات '+esc(s.name)+'" style="width:auto;padding:4px 6px;font-size:13px"><option value="va"'+(v === "va" ? " selected" : "")+'>فيلات وشقق</option><option value="v"'+(v === "v" ? " selected" : "")+'>فيلات بس</option><option value="a"'+(v === "a" ? " selected" : "")+'>شقق بس</option></select>'; };
     $("#secList").innerHTML = AD.sectors.map(function(s){ return '<span class="tagitem'+(s.active ? "" : " off")+'"><b>'+bd(s.name)+'</b>'+tsel(s)+'<button class="sm" type="button" data-sec="'+esc(s.name)+'" data-on="'+(s.active ? "0" : "1")+'">'+(s.active ? "إيقاف" : "تشغيل")+'</button></span>'; }).join("");
+    var team = AD.scope === "team", hint = $("#usersHint");
+    if(!hint.getAttribute("data-full")) hint.setAttribute("data-full", hint.textContent);
+    $("#secCard").hidden = team; $("#setForm").hidden = team;
+    $("#usersTitle").textContent = team ? "مشرفين قطاعاتك" : "المستخدمين"; $("#addUserBtn").textContent = team ? "+ مشرف جديد" : "+ مستخدم جديد";
+    hint.textContent = team ? "دول مشرفين القطاعات اللي في قطاعاتك. تقدر تضيف مشرف جديد، أو تعدّل قطاعاته، أو تغيّر كلمة السر بتاعته، أو توقف حسابه." : hint.getAttribute("data-full");
+    $("#uRole").innerHTML = (team ? ["guard"] : ["guard","manager","site","admin"]).map(function(k){ return '<option value="'+k+'">'+esc(ROLE_LABEL[k])+'</option>'; }).join("");
+    if(team) return;
     $("#sGrace").value = AD.settings.grace; $("#sAlerts").value = AD.settings.alerts ? "1" : "0";
     $("#sDayStart").value = AD.settings.dayStart; drawTimes(AD.settings.times);
   }
@@ -587,22 +595,24 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
   $("#sTimes").addEventListener("click", function(e){ var b = e.target.closest("button[data-rm]"); if(!b) return; if($$("#sTimes input").length <= 1){ toast("لازم يفضل ميعاد واحد على الأقل."); return; } b.parentNode.remove(); });
   $("#sAddTime").addEventListener("click", function(){ var l = readTimes(); l.push(""); drawTimes(l); var ins = $$("#sTimes input"); ins[ins.length - 1].focus(); });
   $("#setForm").addEventListener("submit", function(e){ e.preventDefault(); run("saveSettings", TOKEN, { grace: $("#sGrace").value, alerts: $("#sAlerts").value === "1", times: readTimes(), dayStart: $("#sDayStart").value }).then(function(d){ AD = d; drawAdmin(); toast("اتحفظت الإعدادات."); run("whoami", TOKEN).then(function(r){ B = r; $("#tRound").innerHTML = B.rounds.map(function(x){ return '<option value="'+x.key+'">'+esc(x.label)+'</option>'; }).join(""); }); }).catch(function(err){ toast(errMsg(err)); }); });
-  $("#uRole").innerHTML = ["guard","manager","admin"].map(function(k){ return '<option value="'+k+'">'+esc(ROLE_LABEL[k])+'</option>'; }).join("");
+
   function drawSecs(sel){
     var role = $("#uRole").value;
-    $("#uSecRow").hidden = role === "admin"; $("#uAllRow").hidden = role !== "manager";
-    var all = role === "manager" && sel.indexOf("*") >= 0; $("#uAll").checked = all;
+    var canAll = (role === "manager" || role === "site") && AD.scope !== "team";
+    $("#uSecRow").hidden = role === "admin"; $("#uAllRow").hidden = !canAll;
+    var all = canAll && sel.indexOf("*") >= 0; $("#uAll").checked = all;
     $("#uSecs").innerHTML = AD.sectors.filter(function(s){ return s.active || sel.indexOf(s.name) >= 0; }).map(function(s){ return '<label><input type="checkbox" value="'+esc(s.name)+'"'+(sel.indexOf(s.name) >= 0 ? " checked" : "")+'> '+bd(s.name)+'</label>'; }).join("");
     $("#uSecs").hidden = all;
   }
   $("#uRole").addEventListener("change", function(){ drawSecs(pickedSecs()); });
   $("#uAll").addEventListener("change", function(){ $("#uSecs").hidden = this.checked; });
-  function pickedSecs(){ if($("#uRole").value === "manager" && $("#uAll").checked) return ["*"]; return $$("#uSecs input").filter(function(i){ return i.checked; }).map(function(i){ return i.value; }); }
+  function pickedSecs(){ if(($("#uRole").value === "manager" || $("#uRole").value === "site") && $("#uAll").checked && !$("#uAllRow").hidden) return ["*"]; return $$("#uSecs input").filter(function(i){ return i.checked; }).map(function(i){ return i.value; }); }
   function openUser(u){
     editUser = u || null; delU = false;
     $("#userDlgTitle").textContent = u ? "تعديل: " + u.name : "مستخدم جديد";
     $("#uName").value = u ? u.name : ""; $("#uUser").value = u ? u.username : ""; $("#uUser").readOnly = !!u;
     $("#uRole").value = u ? u.role : "guard"; $("#uEmail").value = u ? (u.email || "") : "";
+    $("#uEmail").closest("label").hidden = AD.scope === "team";
     $("#uPass").value = ""; $("#uPass").placeholder = u ? "سيبها فاضية لو مش هتغيّرها" : "٦ حروف أو أرقام على الأقل"; $("#uPassLbl").textContent = u ? "كلمة سر جديدة (اختياري)" : "كلمة السر";
     $("#uActive").checked = u ? u.active : true; $("#uActiveRow").hidden = !u;
     $("#uDelete").hidden = !u || u.username === B.me.username; $("#uDelete").textContent = "مسح المستخدم";

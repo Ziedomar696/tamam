@@ -28,7 +28,8 @@ const LC = {}; L_HEADERS.forEach(function (h, i) { LC[h] = i; });
 const E_HEADERS = ['الوقت', 'الحساب', 'يوم التمام', 'موعد التمام', 'القطاع', 'قبل', 'بعد', 'ملاحظات'];
 const U_HEADERS = ['اسم المستخدم', 'الاسم', 'الدور', 'القطاعات', 'نشط', 'آخر دخول', 'تاريخ الإنشاء', 'الإيميل', 'salt', 'hash', 'ver'];
 
-const ROLES = { admin: 'الإدارة', manager: 'مدير', guard: 'فرد أمن / مشرف قطاع' };
+const ROLES = { admin: 'الإدارة', site: 'مدير الموقع', manager: 'مدير', guard: 'فرد أمن / مشرف قطاع' };
+// مدير الموقع: لوحة المتابعة لقطاعاته + يضيف ويعدّل ويوقف مشرفي القطاعات (فرد أمن) في قطاعاته بس
 // المواعيد الافتراضية — الإدارة بتغيّرها من التطبيق (الإعدادات)
 const DEFAULT_TIMES = ['06:00', '12:00', '18:00', '00:00'];
 const DEFAULT_DAY_START = '06:00';      // يوم التمام بيبدأ الساعة دي، واللي قبلها بيتحسب على اليوم اللي فات
@@ -390,26 +391,46 @@ function changeMyPassword(token, oldPw, newPw) {
 }
 
 function adminData(token) {
-  auth_(token, ['admin']);
-  return { users: users_().map(publicUser_), roles: ROLES, sectors: sectors_(), settings: settings_() };
+  const me = auth_(token, ['admin', 'site']);
+  if (me.role === 'site') return teamData_(me);
+  return { users: users_().map(publicUser_), roles: ROLES, sectors: sectors_(), settings: settings_(), scope: 'all' };
+}
+/** مدير الموقع بيشوف مشرفي قطاعاته بس، وقطاعاته بس. */
+function teamData_(me) {
+  const mine = mySectors_(me);
+  return { users: users_().filter(function (u) { return inTeam_(me, u); }).map(publicUser_), roles: { guard: ROLES.guard },
+    sectors: sectors_().filter(function (s) { return mine.indexOf(s.name) >= 0; }), scope: 'team' };
+}
+/** المشرف ده تبع مدير الموقع؟ (فرد أمن، وكل قطاعاته جوه قطاعات المدير) */
+function inTeam_(me, u) {
+  if (u.role !== 'guard' || !u.sectors.length) return false;
+  return u.sectors.every(function (s) { return canSee_(me, s); });
 }
 function saveUser(token, d) {
-  auth_(token, ['admin']);
+  const me = auth_(token, ['admin', 'site']);
   const lock = LockService.getScriptLock(); lock.waitLock(20000);
   try {
     const target = findUser_(d.username);
+    if (me.role === 'site') {
+      if (roleKey_(d.role) !== 'guard') throw new Error('مدير الموقع بيضيف مشرفين القطاعات بس.');
+      if (!d.isNew && target && !inTeam_(me, target)) throw new Error('الحساب ده مش من مشرفين قطاعاتك.');
+      const secs = Array.isArray(d.sectors) ? d.sectors : [];
+      if (!secs.length || secs.some(function (s) { return s === '*' || !canSee_(me, s); })) throw new Error('اختار من قطاعاتك بس.');
+      d.email = target ? undefined : '';
+    }
     if (!d.isNew && target && target.role === 'admin' && (roleKey_(d.role) !== 'admin' || d.active === false)) lastAdminGuard_(target);
     writeUser_(d, !!d.isNew);
   } finally { lock.releaseLock(); }
   return adminData(token);
 }
 function deleteUser(token, username) {
-  const me = auth_(token, ['admin']);
+  const me = auth_(token, ['admin', 'site']);
   const lock = LockService.getScriptLock(); lock.waitLock(20000);
   try {
     const t = findUser_(username);
     if (!t) throw new Error('المستخدم مش موجود.');
     if (t.username === me.username) throw new Error('مينفعش تمسح حسابك.');
+    if (me.role === 'site' && !inTeam_(me, t)) throw new Error('الحساب ده مش من مشرفين قطاعاتك.');
     if (t.role === 'admin') lastAdminGuard_(t);
     usersSheet_().deleteRow(t.row);
     dropCache_('users');
@@ -559,7 +580,7 @@ function submitTamam(token, d) {
 
 /** لوحة المتابعة ليوم معيّن (للمدير والإدارة)، في قطاعاتهم بس. */
 function dashboard(token, day) {
-  const u = auth_(token, ['admin', 'manager']);
+  const u = auth_(token, ['admin', 'site', 'manager']);
   const cur = currentRound_();
   day = /^\d{4}-\d{2}-\d{2}$/.test(String(day || '')) ? day : cur.day;
   const secs = mySectors_(u);
@@ -591,7 +612,7 @@ function dashboard(token, day) {
 
 /** تفاصيل خانة: مين سلّم وإمتى، وسجل التعديلات. */
 function cellDetail(token, day, round, sector) {
-  const u = auth_(token, ['admin', 'manager']);
+  const u = auth_(token, ['admin', 'site', 'manager']);
   if (!canSee_(u, sector)) throw new Error('القطاع ده مش عندك.');
   const r = roundOf_(round);
   const sh = editsSheet_();
@@ -603,7 +624,7 @@ function cellDetail(token, day, round, sector) {
 
 /** تصدير فترة (CSV). */
 function exportRange(token, from, to) {
-  const u = auth_(token, ['admin', 'manager']);
+  const u = auth_(token, ['admin', 'site', 'manager']);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) throw new Error('اختار الفترة صح.');
   const days = []; for (let d = from, i = 0; d <= to && i < 400; d = shiftDay_(d, 1), i++) days.push(d);
   const order = {}; rounds_().forEach(function (r, i) { order[r.key] = i; });
@@ -629,7 +650,7 @@ function checkMissing() {
   const missing = activeSectors_().filter(function (s) { return got.indexOf(s) < 0; });
   props.setProperty(pk, '1');
   if (!missing.length) return;
-  const to = users_().filter(function (u) { return u.active && u.email && (u.role === 'admin' || (u.role === 'manager' && missing.some(function (s) { return canSee_(u, s); }))); })
+  const to = users_().filter(function (u) { return u.active && u.email && (u.role === 'admin' || ((u.role === 'manager' || u.role === 'site') && missing.some(function (s) { return canSee_(u, s); }))); })
     .map(function (u) { return u.email; });
   if (!to.length) { try { to.push(Session.getEffectiveUser().getEmail()); } catch (e) {} }
   if (!to.length || !to[0]) return;
