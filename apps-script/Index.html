@@ -83,6 +83,13 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .stepper{display:grid;grid-template-columns:52px minmax(0,1fr) 52px;gap:6px;align-items:center}
 .stepper button{font-size:24px;padding:4px 0;line-height:1.4}
 .stepper input{text-align:center;font-family:var(--mono);font-size:26px;font-weight:600;padding:6px 4px;direction:ltr}
+.ublock{border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;gap:8px}
+.ublock h3{display:flex;justify-content:space-between;align-items:center;font-size:15px}
+.ublock h3 b{font-family:var(--mono);font-size:18px}
+.ublock[data-t="v"]{border-inline-start:4px solid var(--brand)}
+.ublock[data-t="a"]{border-inline-start:4px solid var(--accent)}
+.split{font-size:12px;color:var(--muted)}
+table.mini{font-size:13px}table.mini td,table.mini th{padding:5px 8px;text-align:center}
 .totalbox{display:flex;justify-content:space-between;align-items:center;border:2px solid var(--brand);border-radius:12px;padding:10px 14px}
 .totalbox b{font-family:var(--mono);font-size:28px}
 .done-note{border-radius:10px;padding:10px 12px;background:var(--green-bg);color:var(--green);font-size:14px}
@@ -186,11 +193,7 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
       </div>
       <label class="f">القطاع<select id="tSector"></select></label>
       <div class="done-note" id="tDone" hidden></div>
-      <div class="counters">
-        <div class="counter"><span>عدد الملاك</span><div class="stepper"><button type="button" data-d="-1" data-for="tOwners">−</button><input id="tOwners" inputmode="numeric" value="0" aria-label="عدد الملاك"><button type="button" data-d="1" data-for="tOwners">+</button></div></div>
-        <div class="counter"><span>عدد المستأجرين</span><div class="stepper"><button type="button" data-d="-1" data-for="tTenants">−</button><input id="tTenants" inputmode="numeric" value="0" aria-label="عدد المستأجرين"><button type="button" data-d="1" data-for="tTenants">+</button></div></div>
-        <div class="counter"><span>عدد المفوضين</span><div class="stepper"><button type="button" data-d="-1" data-for="tDelegates">−</button><input id="tDelegates" inputmode="numeric" value="0" aria-label="عدد المفوضين"><button type="button" data-d="1" data-for="tDelegates">+</button></div></div>
-      </div>
+      <div id="tParts" style="display:grid;gap:10px"></div>
       <div class="totalbox"><span>الإجمالي</span><b id="tTotal">0</b></div>
       <label class="f">ملاحظات (اختياري)<textarea id="tNotes" placeholder="مثال: وصول عائلتين فيلا 14"></textarea></label>
       <p class="hint">مشرف القطاع بيتسجل تلقائي من حسابك: <b id="tBy"></b></p>
@@ -239,8 +242,8 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     <div class="card">
       <h2>القطاعات</h2>
       <div class="tagset" id="secList"></div>
-      <form class="bar-row" id="secForm"><label class="f grow">قطاع جديد<input id="newSec"></label><button class="solid" type="submit">إضافة</button></form>
-      <p class="hint">القطاع الموقوف بيختفي من التسليم واللوحة، بس تمامه القديم بيفضل في السجل.</p>
+      <form class="bar-row" id="secForm"><label class="f grow">قطاع جديد<input id="newSec"></label><label class="f">الوحدات<select id="newSecType"><option value="va">فيلات وشقق</option><option value="v">فيلات بس</option><option value="a">شقق بس</option></select></label><button class="solid" type="submit">إضافة</button></form>
+      <p class="hint">لكل قطاع اختار فيه إيه: فيلات بس، شقق بس، أو الاتنين. التمام بيتقسم على حسب كده. القطاع الموقوف بيختفي من التسليم واللوحة، بس تمامه القديم بيفضل في السجل.</p>
     </div>
     <form class="card" id="setForm">
       <h2>الإعدادات</h2>
@@ -401,10 +404,29 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
   }
 
   // ================================================================ تسليم
-  function nums(){ return ["tOwners","tTenants","tDelegates"].map(function(id){ var v = String($("#"+id).value).replace(/[٠-٩]/g, function(d){ return "٠١٢٣٤٥٦٧٨٩".indexOf(d); }).replace(/\D/g, ""); return v === "" ? NaN : Number(v); }); }
-  function total(){ var n = nums(); $("#tTotal").textContent = n.some(isNaN) ? "—" : fmt(n[0] + n[1] + n[2]); }
-  $$(".stepper button").forEach(function(b){ b.addEventListener("click", function(){ var i = $("#" + b.getAttribute("data-for")); var v = Number(String(i.value).replace(/\D/g, "")) || 0; i.value = Math.max(0, v + Number(b.getAttribute("data-d"))); total(); }); });
-  ["tOwners","tTenants","tDelegates"].forEach(function(id){ $("#"+id).addEventListener("input", total); $("#"+id).addEventListener("focus", function(){ this.select(); }); });
+  // ---------- الأعداد: بلوك للفيلات وبلوك للشقق حسب نوع وحدات القطاع ----------
+  var FIELDS = [["owners","عدد الملاك"],["tenants","عدد المستأجرين"],["delegates","عدد المفوضين"]];
+  var ULABEL = { v: "الفيلات", a: "الشقق" };
+  function typesOf(sec){ return (B.types && B.types[sec]) || ["v","a"]; }
+  function buildParts(){
+    var ts = typesOf($("#tSector").value);
+    $("#tParts").innerHTML = ts.map(function(t){
+      return '<div class="ublock" data-t="'+t+'"><h3><span>'+ULABEL[t]+'</span><span>الإجمالي <b id="sub_'+t+'">0</b></span></h3><div class="counters">' +
+        FIELDS.map(function(f){ var id = "n_"+t+"_"+f[0]; return '<div class="counter"><span>'+f[1]+'</span><div class="stepper"><button type="button" data-d="-1" data-for="'+id+'">−</button><input id="'+id+'" inputmode="numeric" value="0" aria-label="'+f[1]+' — '+ULABEL[t]+'"><button type="button" data-d="1" data-for="'+id+'">+</button></div></div>'; }).join("") +
+        '</div></div>';
+    }).join("");
+  }
+  function numOf(id){ var el = $("#"+id); if(!el) return 0; var v = String(el.value).replace(/[٠-٩]/g, function(d){ return "٠١٢٣٤٥٦٧٨٩".indexOf(d); }).replace(/\D/g, ""); return v === "" ? NaN : Number(v); }
+  function parts(){ var o = {}; typesOf($("#tSector").value).forEach(function(t){ o[t] = {}; FIELDS.forEach(function(f){ o[t][f[0]] = numOf("n_"+t+"_"+f[0]); }); }); return o; }
+  function total(){
+    var p = parts(), g = 0, bad = false;
+    Object.keys(p).forEach(function(t){ var s = p[t].owners + p[t].tenants + p[t].delegates; if(isNaN(s)) bad = true; else g += s; var el = $("#sub_"+t); if(el) el.textContent = isNaN(s) ? "—" : fmt(s); });
+    $("#tTotal").textContent = bad ? "—" : fmt(g);
+  }
+  $("#tParts").addEventListener("click", function(e){ var b = e.target.closest(".stepper button"); if(!b) return; var i = $("#" + b.getAttribute("data-for")); var v = Number(String(i.value).replace(/\D/g, "")) || 0; i.value = Math.max(0, v + Number(b.getAttribute("data-d"))); total(); });
+  $("#tParts").addEventListener("input", total);
+  $("#tParts").addEventListener("focusin", function(e){ if(e.target.tagName === "INPUT") e.target.select(); });
+  function splitTxt(x, sec){ var ts = typesOf(sec); return ts.length > 1 ? "فيلات " + x.v.total + " · شقق " + x.a.total : x.owners + " · " + x.tenants + " · " + x.delegates; }
   function target(){ // اليوم والميعاد اللي بيتسلّم
     if(B.me.role !== "guard" && $("#tDay").value) return { day: $("#tDay").value, round: $("#tRound").value };
     return { day: MINE.current.day, round: MINE.current.key };
@@ -416,16 +438,16 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     var box = $("#tDone");
     if(row){
       box.hidden = false; box.textContent = "✓ اتسلّم تمام " + rLabel(t.round) + " لقطاع " + sec + " الساعة " + hm(row.at) + " (" + row.by + ")" + (row.edited ? " · آخر تعديل: " + row.edited.replace(/\s*\d{4}-\d{2}-\d{2} (\d{2}:\d{2})/, " الساعة $1") : "") + ". لو عدّلت الأرقام، التعديل بيتسجل.";
-      $("#tOwners").value = row.owners; $("#tTenants").value = row.tenants; $("#tDelegates").value = row.delegates; $("#tNotes").value = row.notes;
+      buildParts(); typesOf(sec).forEach(function(t){ FIELDS.forEach(function(f){ var el = $("#n_"+t+"_"+f[0]); if(el) el.value = row[t][f[0]]; }); }); $("#tNotes").value = row.notes;
       $("#tSave").textContent = "حفظ التعديل";
     } else {
-      box.hidden = true; ["tOwners","tTenants","tDelegates"].forEach(function(id){ $("#"+id).value = 0; }); $("#tNotes").value = "";
+      box.hidden = true; buildParts(); $("#tNotes").value = "";
       $("#tSave").textContent = "تسليم التمام";
     }
     total();
   }
   function drawMine(s){
-    MINE = s;
+    MINE = s; if(s.types) B.types = s.types;
     var c = s.current;
     $("#rbLabel").textContent = "تمام " + c.label; $("#rbDay").textContent = "· يوم " + dayLabel(c.day);
     var lateNow = new Date() > parseCairo(c.lateAfter);
@@ -436,7 +458,7 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     var keys = B.rounds.map(function(r){ return r.key; });
     $("#mineTable").innerHTML = s.sectors.length ? '<div class="tablewrap"><table><thead><tr><th>القطاع</th>' + B.rounds.map(function(r){ return "<th>"+esc(r.label)+"</th>"; }).join("") + "</tr></thead><tbody>" +
       s.sectors.map(function(sec){ return "<tr><td>"+bd(sec)+"</td>" + keys.map(function(k){ var r = s.rows.filter(function(x){ return x.sector === sec && x.round === k; })[0];
-        return r ? '<td class="cell '+(r.late ? "c-late" : "c-ok")+'"><b>'+r.total+'</b><small>'+hm(r.at)+'</small></td>' : '<td class="cell c-future">—</td>'; }).join("") + "</tr>"; }).join("") + "</tbody></table></div>"
+        return r ? '<td class="cell '+(r.late ? "c-late" : "c-ok")+'"><b>'+r.total+'</b><small>'+(typesOf(sec).length > 1 ? "ف "+r.v.total+" · ش "+r.a.total+" · " : "")+hm(r.at)+'</small></td>' : '<td class="cell c-future">—</td>'; }).join("") + "</tr>"; }).join("") + "</tbody></table></div>"
       : '<div class="empty">حسابك مش على أي قطاع. كلّم الإدارة.</div>';
   }
   function parseCairo(stamp){ return new Date(String(stamp).replace(" ", "T") + ":00" + cairoOffset()); }
@@ -450,10 +472,11 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
   $("#tDay").addEventListener("change", loadExtra); $("#tRound").addEventListener("change", loadExtra);
   $("#tForm").addEventListener("submit", function(e){
     e.preventDefault();
-    var n = nums(); if(n.some(isNaN)){ $("#tMsg").textContent = "اكتب الأعداد التلاتة (صفر لو مفيش)."; return; }
+    var pr = parts(), bad = Object.keys(pr).some(function(t){ return FIELDS.some(function(f){ return isNaN(pr[t][f[0]]); }); });
+    if(bad){ $("#tMsg").textContent = "اكتب كل الأعداد (صفر لو مفيش)."; return; }
     if(!$("#tSector").value){ $("#tMsg").textContent = "اختار القطاع."; return; }
     var t = target();
-    var d = { sector: $("#tSector").value, owners: n[0], tenants: n[1], delegates: n[2], notes: $("#tNotes").value.trim(), round: t.round };
+    var d = { sector: $("#tSector").value, parts: pr, notes: $("#tNotes").value.trim(), round: t.round };
     if(B.me.role !== "guard"){ d.day = t.day; }
     var b = $("#tSave"), lbl = b.textContent; busy(b, true, "بيسلّم…"); $("#tMsg").textContent = "";
     run("submitTamam", TOKEN, d).then(function(r){
@@ -470,7 +493,7 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
   $("#dDay").addEventListener("change", function(){ loadDash(); });
   $("#dToday").addEventListener("click", function(){ $("#dDay").value = ""; loadDash(); });
   function drawDash(d){
-    DASH = d;
+    DASH = d; if(d.types) B.types = d.types;
     if(!$("#dDay").value) $("#dDay").value = d.day;
     if(!$("#xFrom").value){ $("#xFrom").value = d.week[0].day; $("#xTo").value = d.day; }
     $("#dSync").textContent = "آخر تحديث " + new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
@@ -480,6 +503,7 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
       var st = r.state === "future" ? '<span class="pill p-grey">لسه</span>' : r.missing.length ? (r.state === "due" ? '<span class="pill p-red">ناقص ' + r.missing.length + '</span>' : '<span class="pill p-amber">مفتوح</span>') : '<span class="pill p-green">كامل</span>';
       return '<div class="rcard'+(now ? " now" : "")+'"><div class="h"><span>'+esc(r.label)+'</span>'+st+'</div>' +
         '<div class="tot">'+(r.done ? fmt(r.total) : "—")+'</div>' +
+        '<div class="br"><span>فيلات <b>'+fmt(r.villas)+'</b></span><span>شقق <b>'+fmt(r.apts)+'</b></span></div>' +
         '<div class="br"><span>ملاك '+fmt(r.owners)+'</span><span>مستأجرين '+fmt(r.tenants)+'</span><span>مفوضين '+fmt(r.delegates)+'</span></div>' +
         '<div class="br"><span>سلّم '+r.done+' من '+d.sectors.length+'</span></div>' +
         (r.missing.length && r.state !== "future" ? '<div class="miss">'+(r.state === "due" ? "ماسلّمش: " : "لسه: ")+r.missing.map(bd).join("، ")+'</div>' : "") + '</div>';
@@ -488,13 +512,13 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     var body = d.sectors.map(function(s){
       return "<tr><td>"+bd(s)+"</td>" + d.rounds.map(function(r){
         var x = (d.cells[s] || {})[r.key];
-        if(x) return '<td class="cell '+(x.late ? "c-late" : "c-ok")+'" data-s="'+esc(s)+'" data-r="'+r.key+'"><b>'+x.total+'</b><small>'+x.owners+' · '+x.tenants+' · '+x.delegates+'</small></td>';
+        if(x) return '<td class="cell '+(x.late ? "c-late" : "c-ok")+'" data-s="'+esc(s)+'" data-r="'+r.key+'"><b>'+x.total+'</b><small>'+splitTxt(x, s)+'</small></td>';
         if(r.state === "due") return '<td class="cell c-miss" data-s="'+esc(s)+'" data-r="'+r.key+'">ماسلّمش</td>';
         return '<td class="cell '+(r.state === "open" ? "c-wait" : "c-future")+'">'+(r.state === "open" ? "مستني" : "")+'</td>';
       }).join("") + "</tr>";
     }).join("");
     var tot = "<tr><th>الإجمالي</th>" + d.rounds.map(function(r){ return '<th style="text-align:center">'+(r.done ? fmt(r.total) : "—")+"</th>"; }).join("") + "</tr>";
-    $("#dTable").innerHTML = '<div class="tablewrap"><table><thead>'+head+'</thead><tbody>'+body+'</tbody><tfoot>'+tot+'</tfoot></table></div><p class="hint">الأرقام الصغيرة: ملاك · مستأجرين · مفوضين</p>';
+    $("#dTable").innerHTML = '<div class="tablewrap"><table><thead>'+head+'</thead><tbody>'+body+'</tbody><tfoot>'+tot+'</tfoot></table></div><p class="hint">الأرقام الصغيرة: في القطاع اللي فيه فيلات وشقق = إجمالي كل نوع، وفي القطاع اللي فيه نوع واحد = ملاك · مستأجرين · مفوضين.</p>';
     $("#dWeek").innerHTML = '<div class="tablewrap"><table><thead><tr><th>اليوم</th>' + d.rounds.map(function(r){ return "<th>"+esc(r.label)+"</th>"; }).join("") + "</tr></thead><tbody>" +
       d.week.slice().reverse().map(function(w){ return "<tr><td>"+esc(dayLabel(w.day))+"</td>" + d.rounds.map(function(r){ return '<td class="num">'+(w[r.key] == null ? "—" : fmt(w[r.key]))+"</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table></div>";
   }
@@ -504,7 +528,11 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     var s = td.getAttribute("data-s"), k = td.getAttribute("data-r"), x = (DASH.cells[s] || {})[k];
     CELL = { s: s, k: k, day: DASH.day };
     $("#cTitle").textContent = "تمام " + rLabel(k) + " — " + s + " — " + dayLabel(DASH.day);
-    $("#cKv").innerHTML = x ? "<dt>ملاك</dt><dd>"+x.owners+"</dd><dt>مستأجرين</dt><dd>"+x.tenants+"</dd><dt>مفوضين</dt><dd>"+x.delegates+"</dd><dt>الإجمالي</dt><dd><b>"+x.total+"</b></dd><dt>مشرف القطاع</dt><dd>"+esc(x.by)+"</dd><dt>وقت التسليم</dt><dd><span class=\"num\">"+esc(x.at)+"</span>"+(x.late ? ' <span class="pill p-amber">متأخر</span>' : "")+"</dd>"+(x.notes ? "<dt>ملاحظات</dt><dd>"+esc(x.notes)+"</dd>" : "")
+    var ts = typesOf(s);
+    var mini = x ? '<div class="tablewrap"><table class="mini"><thead><tr><th></th><th>ملاك</th><th>مستأجرين</th><th>مفوضين</th><th>الإجمالي</th></tr></thead><tbody>' +
+      ts.map(function(t){ return "<tr><th>"+ULABEL[t]+"</th><td>"+x[t].owners+"</td><td>"+x[t].tenants+"</td><td>"+x[t].delegates+"</td><td><b>"+x[t].total+"</b></td></tr>"; }).join("") +
+      (ts.length > 1 ? "<tr><th>الكل</th><td>"+x.owners+"</td><td>"+x.tenants+"</td><td>"+x.delegates+"</td><td><b>"+x.total+"</b></td></tr>" : "") + "</tbody></table></div>" : "";
+    $("#cKv").innerHTML = x ? "<dt>الأعداد</dt><dd>"+mini+"</dd><dt>مشرف القطاع</dt><dd>"+esc(x.by)+"</dd><dt>وقت التسليم</dt><dd><span class=\"num\">"+esc(x.at)+"</span>"+(x.late ? ' <span class="pill p-amber">متأخر</span>' : "")+"</dd>"+(x.notes ? "<dt>ملاحظات</dt><dd>"+esc(x.notes)+"</dd>" : "")
       : '<dt>الحالة</dt><dd><span class="pill p-red">ماسلّمش</span></dd>';
     $("#cEdits").innerHTML = '<li>بيحمّل…</li>'; $("#cEditsBox").hidden = !x;
     $("#cellDlg").showModal();
@@ -528,12 +556,14 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
   function secLabel(u){ return u.role === "admin" || u.sectors.indexOf("*") >= 0 ? "كل القطاعات" : u.sectors.map(bd).join("، "); }
   function drawAdmin(){
     $("#usersBody").innerHTML = AD.users.map(function(u){ return "<tr><td>"+esc(u.name)+"</td><td class=\"num\">"+esc(u.username)+"</td><td>"+esc(ROLE_LABEL[u.role])+"</td><td>"+secLabel(u)+"</td><td>"+(u.active ? '<span class="pill p-green">شغال</span>' : '<span class="pill p-red">موقوف</span>')+"</td><td class=\"num\">"+esc(u.lastLogin || "—")+'</td><td><button class="sm" type="button" data-u="'+esc(u.username)+'">تعديل</button></td></tr>'; }).join("");
-    $("#secList").innerHTML = AD.sectors.map(function(s){ return '<span class="tagitem'+(s.active ? "" : " off")+'"><b>'+bd(s.name)+'</b><button class="sm" type="button" data-sec="'+esc(s.name)+'" data-on="'+(s.active ? "0" : "1")+'">'+(s.active ? "إيقاف" : "تشغيل")+'</button></span>'; }).join("");
+    var tsel = function(s){ var v = s.types.join(""); return '<select data-sectype="'+esc(s.name)+'" aria-label="وحدات '+esc(s.name)+'" style="width:auto;padding:4px 6px;font-size:13px"><option value="va"'+(v === "va" ? " selected" : "")+'>فيلات وشقق</option><option value="v"'+(v === "v" ? " selected" : "")+'>فيلات بس</option><option value="a"'+(v === "a" ? " selected" : "")+'>شقق بس</option></select>'; };
+    $("#secList").innerHTML = AD.sectors.map(function(s){ return '<span class="tagitem'+(s.active ? "" : " off")+'"><b>'+bd(s.name)+'</b>'+tsel(s)+'<button class="sm" type="button" data-sec="'+esc(s.name)+'" data-on="'+(s.active ? "0" : "1")+'">'+(s.active ? "إيقاف" : "تشغيل")+'</button></span>'; }).join("");
     $("#sGrace").value = AD.settings.grace; $("#sAlerts").value = AD.settings.alerts ? "1" : "0";
   }
-  function afterAdmin(d){ AD = d; drawAdmin(); run("whoami", TOKEN).then(function(r){ B = r; options($("#tSector"), B.sectors, $("#tSector").value); }); }
+  function afterAdmin(d){ AD = d; drawAdmin(); run("whoami", TOKEN).then(function(r){ B = r; options($("#tSector"), B.sectors, $("#tSector").value); fillForm(); }); }
   $("#secList").addEventListener("click", function(e){ var b = e.target.closest("button[data-sec]"); if(!b) return; busy(b, true); run("saveSector", TOKEN, b.getAttribute("data-sec"), b.getAttribute("data-on") === "1").then(afterAdmin).catch(function(err){ toast(errMsg(err)); busy(b, false); }); });
-  $("#secForm").addEventListener("submit", function(e){ e.preventDefault(); var v = $("#newSec").value.trim(); if(!v) return; run("saveSector", TOKEN, v, true).then(function(d){ $("#newSec").value = ""; toast("اتضاف قطاع " + v); afterAdmin(d); }).catch(function(err){ toast(errMsg(err)); }); });
+  $("#secList").addEventListener("change", function(e){ var sel = e.target.closest("select[data-sectype]"); if(!sel) return; run("saveSectorTypes", TOKEN, sel.getAttribute("data-sectype"), sel.value.split("")).then(function(d){ toast("اتحفظ: " + sel.options[sel.selectedIndex].text); afterAdmin(d); }).catch(function(err){ toast(errMsg(err)); }); });
+  $("#secForm").addEventListener("submit", function(e){ e.preventDefault(); var v = $("#newSec").value.trim(); if(!v) return; run("saveSector", TOKEN, v, true, $("#newSecType").value === "v" ? "فيلات" : $("#newSecType").value === "a" ? "شقق" : "فيلات وشقق").then(function(d){ $("#newSec").value = ""; toast("اتضاف قطاع " + v); afterAdmin(d); }).catch(function(err){ toast(errMsg(err)); }); });
   $("#setForm").addEventListener("submit", function(e){ e.preventDefault(); run("saveSettings", TOKEN, { grace: $("#sGrace").value, alerts: $("#sAlerts").value === "1" }).then(function(d){ AD = d; drawAdmin(); toast("اتحفظت الإعدادات."); }).catch(function(err){ toast(errMsg(err)); }); });
   $("#uRole").innerHTML = ["guard","manager","admin"].map(function(k){ return '<option value="'+k+'">'+esc(ROLE_LABEL[k])+'</option>'; }).join("");
   function drawSecs(sel){
