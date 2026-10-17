@@ -94,9 +94,12 @@ table.mini{font-size:13px}table.mini td,table.mini th{padding:5px 8px;text-align
 .totalbox b{font-family:var(--mono);font-size:28px}
 .done-note{border-radius:10px;padding:10px 12px;background:var(--green-bg);color:var(--green);font-size:14px}
 /* dashboard */
-.rounds{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-@media (max-width:900px){.rounds{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:420px){.rounds{grid-template-columns:1fr}}
+.rounds{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.counter.occ{border-style:dashed}
+.timelist{display:flex;flex-wrap:wrap;gap:8px}
+.timeitem{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;padding:4px 6px;background:var(--surface-2)}
+.timeitem input{width:auto;padding:5px 8px;direction:ltr}
+.timeitem small{color:var(--muted);font-size:12px;min-width:90px}
 .rcard{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:4px;background:var(--surface)}
 .rcard.now{border:2px solid var(--accent)}
 .rcard .h{display:flex;justify-content:space-between;align-items:center;gap:6px;font-weight:700}
@@ -164,7 +167,7 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
   <header class="top">
     <div class="brandline">
       <div class="logo" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="m16 11 2 2 4-4"/></svg></div>
-      <div><h1>تمام الملاك</h1><p>عدد الموجودين جوه كل قطاع ٤ مرات في اليوم</p></div>
+      <div><h1>تمام الملاك</h1><p>عدد الموجودين جوه كل قطاع في كل ميعاد تمام</p></div>
     </div>
     <div class="who">
       <span class="chip role" id="meRole"></span>
@@ -250,8 +253,15 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
       <div class="bar-row">
         <label class="f">التمام يتحسب «متأخر» بعد الميعاد بكام دقيقة؟<input id="sGrace" type="number" min="0" max="240"></label>
         <label class="f">تنبيه بالإيميل لو قطاع ماسلّمش<select id="sAlerts"><option value="1">أيوه</option><option value="0">لأ</option></select></label>
-        <button class="solid" type="submit">حفظ</button>
       </div>
+      <h3>مواعيد التمام</h3>
+      <div class="timelist" id="sTimes"></div>
+      <div class="bar-row">
+        <button class="sm" type="button" id="sAddTime">+ ميعاد تمام</button>
+        <label class="f">يوم التمام بيبدأ الساعة<input type="time" id="sDayStart" dir="ltr"></label>
+      </div>
+      <p class="hint">أي ميعاد قبل بداية اليوم (زي ١٢ بالليل لو اليوم بيبدأ ٦ الصبح) بيتحسب على اليوم اللي فات. لازم ساعة على الأقل بين كل ميعادين. فرد الأمن يقدر يسلّم قبل الميعاد بساعة، وبعد دقايق السماح بيتحسب متأخر. لو غيّرت المواعيد، الجديد بيتطبق على طول، والتمام القديم بيفضل في السجل والـ Excel.</p>
+      <div class="actions"><button class="solid" type="submit">حفظ الإعدادات</button></div>
       <p class="hint">التنبيه بيوصل للإدارة والمديرين اللي عليهم إيميل، مرة واحدة لكل ميعاد بعد ما دقايق السماح تخلص.</p>
     </form>
   </section>
@@ -413,18 +423,18 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     $("#tParts").innerHTML = ts.map(function(t){
       return '<div class="ublock" data-t="'+t+'"><h3><span>'+ULABEL[t]+'</span><span>الإجمالي <b id="sub_'+t+'">0</b></span></h3><div class="counters">' +
         FIELDS.map(function(f){ var id = "n_"+t+"_"+f[0]; return '<div class="counter"><span>'+f[1]+'</span><div class="stepper"><button type="button" data-d="-1" data-for="'+id+'">−</button><input id="'+id+'" inputmode="numeric" value="0" aria-label="'+f[1]+' — '+ULABEL[t]+'"><button type="button" data-d="1" data-for="'+id+'">+</button></div></div>'; }).join("") +
-        '</div></div>';
+        '</div>' + (function(){ var id = "n_"+t+"_units", l = "عدد "+ULABEL[t]+" المشغولة"; return '<div class="counter occ"><span>'+l+' (فيها حد)</span><div class="stepper"><button type="button" data-d="-1" data-for="'+id+'">−</button><input id="'+id+'" inputmode="numeric" value="0" aria-label="'+l+'"><button type="button" data-d="1" data-for="'+id+'">+</button></div></div>'; })() + '</div>';
     }).join("");
   }
   function numOf(id){ var el = $("#"+id); if(!el) return 0; var v = String(el.value).replace(/[٠-٩]/g, function(d){ return "٠١٢٣٤٥٦٧٨٩".indexOf(d); }).replace(/\D/g, ""); return v === "" ? NaN : Number(v); }
-  function parts(){ var o = {}; typesOf($("#tSector").value).forEach(function(t){ o[t] = {}; FIELDS.forEach(function(f){ o[t][f[0]] = numOf("n_"+t+"_"+f[0]); }); }); return o; }
+  function parts(){ var o = {}; typesOf($("#tSector").value).forEach(function(t){ o[t] = {}; FIELDS.forEach(function(f){ o[t][f[0]] = numOf("n_"+t+"_"+f[0]); }); o[t].units = numOf("n_"+t+"_units"); }); return o; }
   function total(){
     var p = parts(), g = 0, bad = false;
     Object.keys(p).forEach(function(t){ var s = p[t].owners + p[t].tenants + p[t].delegates; if(isNaN(s)) bad = true; else g += s; var el = $("#sub_"+t); if(el) el.textContent = isNaN(s) ? "—" : fmt(s); });
     $("#tTotal").textContent = bad ? "—" : fmt(g);
   }
   $("#tParts").addEventListener("click", function(e){ var b = e.target.closest(".stepper button"); if(!b) return; var i = $("#" + b.getAttribute("data-for")); var v = Number(String(i.value).replace(/\D/g, "")) || 0; i.value = Math.max(0, v + Number(b.getAttribute("data-d"))); total(); });
-  $("#tParts").addEventListener("input", total);
+  $("#tParts").addEventListener("input", function(){ total(); $("#tMsg").textContent = ""; });
   $("#tParts").addEventListener("focusin", function(e){ if(e.target.tagName === "INPUT") e.target.select(); });
   function splitTxt(x, sec){ var ts = typesOf(sec); return ts.length > 1 ? "فيلات " + x.v.total + " · شقق " + x.a.total : x.owners + " · " + x.tenants + " · " + x.delegates; }
   function target(){ // اليوم والميعاد اللي بيتسلّم
@@ -438,7 +448,7 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     var box = $("#tDone");
     if(row){
       box.hidden = false; box.textContent = "✓ اتسلّم تمام " + rLabel(t.round) + " لقطاع " + sec + " الساعة " + hm(row.at) + " (" + row.by + ")" + (row.edited ? " · آخر تعديل: " + row.edited.replace(/\s*\d{4}-\d{2}-\d{2} (\d{2}:\d{2})/, " الساعة $1") : "") + ". لو عدّلت الأرقام، التعديل بيتسجل.";
-      buildParts(); typesOf(sec).forEach(function(t){ FIELDS.forEach(function(f){ var el = $("#n_"+t+"_"+f[0]); if(el) el.value = row[t][f[0]]; }); }); $("#tNotes").value = row.notes;
+      buildParts(); typesOf(sec).forEach(function(t){ FIELDS.forEach(function(f){ var el = $("#n_"+t+"_"+f[0]); if(el) el.value = row[t][f[0]]; }); var u = $("#n_"+t+"_units"); if(u) u.value = row.occ[t]; }); $("#tNotes").value = row.notes;
       $("#tSave").textContent = "حفظ التعديل";
     } else {
       box.hidden = true; buildParts(); $("#tNotes").value = "";
@@ -453,7 +463,8 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     var lateNow = new Date() > parseCairo(c.lateAfter);
     $("#rbState").className = "pill " + (lateNow ? "p-amber" : "p-green"); $("#rbState").textContent = lateNow ? "عدّى ميعاده — اللي هيتسلّم هيتحسب متأخر" : "مفتوح لحد " + hm(c.lateAfter);
     if(!$("#tDay").value) $("#tDay").value = c.day;
-    if(document.activeElement && document.activeElement.closest && document.activeElement.closest("#tForm")){} else fillForm();
+    var key = c.day + "|" + c.key + "|" + $("#tSector").value;
+    if(key !== drawMine.last || !$("#tParts").children.length){ drawMine.last = key; fillForm(); }
     // جدول النهارده
     var keys = B.rounds.map(function(r){ return r.key; });
     $("#mineTable").innerHTML = s.sectors.length ? '<div class="tablewrap"><table><thead><tr><th>القطاع</th>' + B.rounds.map(function(r){ return "<th>"+esc(r.label)+"</th>"; }).join("") + "</tr></thead><tbody>" +
@@ -472,7 +483,7 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
   $("#tDay").addEventListener("change", loadExtra); $("#tRound").addEventListener("change", loadExtra);
   $("#tForm").addEventListener("submit", function(e){
     e.preventDefault();
-    var pr = parts(), bad = Object.keys(pr).some(function(t){ return FIELDS.some(function(f){ return isNaN(pr[t][f[0]]); }); });
+    var pr = parts(), bad = Object.keys(pr).some(function(t){ return isNaN(pr[t].units) || FIELDS.some(function(f){ return isNaN(pr[t][f[0]]); }); });
     if(bad){ $("#tMsg").textContent = "اكتب كل الأعداد (صفر لو مفيش)."; return; }
     if(!$("#tSector").value){ $("#tMsg").textContent = "اختار القطاع."; return; }
     var t = target();
@@ -482,8 +493,9 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     run("submitTamam", TOKEN, d).then(function(r){
       toast(r.same ? "مفيش تغيير." : r.edited ? "اتحفظ التعديل واتسجل." : r.late ? "اتسلّم التمام (متأخر)." : "اتسلّم التمام ✓");
       document.activeElement && document.activeElement.blur && document.activeElement.blur();
+      lbl = "حفظ التعديل";
       drawMine(r.state); if(t.day !== r.state.current.day || t.round !== r.state.current.key) loadExtra(); else fillForm();
-    }).catch(function(err){ $("#tMsg").textContent = errMsg(err); }).then(function(){ busy(b, false); fillForm(); });
+    }).catch(function(err){ $("#tMsg").textContent = errMsg(err); }).then(function(){ busy(b, false); $("#tSave").textContent = lbl; });
   });
 
   // ================================================================ لوحة المتابعة
@@ -504,6 +516,7 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
       return '<div class="rcard'+(now ? " now" : "")+'"><div class="h"><span>'+esc(r.label)+'</span>'+st+'</div>' +
         '<div class="tot">'+(r.done ? fmt(r.total) : "—")+'</div>' +
         '<div class="br"><span>فيلات <b>'+fmt(r.villas)+'</b></span><span>شقق <b>'+fmt(r.apts)+'</b></span></div>' +
+        '<div class="br"><span>مشغول: '+fmt(r.occV)+' فيلا · '+fmt(r.occA)+' شقة</span></div>' +
         '<div class="br"><span>ملاك '+fmt(r.owners)+'</span><span>مستأجرين '+fmt(r.tenants)+'</span><span>مفوضين '+fmt(r.delegates)+'</span></div>' +
         '<div class="br"><span>سلّم '+r.done+' من '+d.sectors.length+'</span></div>' +
         (r.missing.length && r.state !== "future" ? '<div class="miss">'+(r.state === "due" ? "ماسلّمش: " : "لسه: ")+r.missing.map(bd).join("، ")+'</div>' : "") + '</div>';
@@ -529,9 +542,9 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     CELL = { s: s, k: k, day: DASH.day };
     $("#cTitle").textContent = "تمام " + rLabel(k) + " — " + s + " — " + dayLabel(DASH.day);
     var ts = typesOf(s);
-    var mini = x ? '<div class="tablewrap"><table class="mini"><thead><tr><th></th><th>ملاك</th><th>مستأجرين</th><th>مفوضين</th><th>الإجمالي</th></tr></thead><tbody>' +
-      ts.map(function(t){ return "<tr><th>"+ULABEL[t]+"</th><td>"+x[t].owners+"</td><td>"+x[t].tenants+"</td><td>"+x[t].delegates+"</td><td><b>"+x[t].total+"</b></td></tr>"; }).join("") +
-      (ts.length > 1 ? "<tr><th>الكل</th><td>"+x.owners+"</td><td>"+x.tenants+"</td><td>"+x.delegates+"</td><td><b>"+x.total+"</b></td></tr>" : "") + "</tbody></table></div>" : "";
+    var mini = x ? '<div class="tablewrap"><table class="mini"><thead><tr><th></th><th>ملاك</th><th>مستأجرين</th><th>مفوضين</th><th>الإجمالي</th><th>وحدات مشغولة</th></tr></thead><tbody>' +
+      ts.map(function(t){ return "<tr><th>"+ULABEL[t]+"</th><td>"+x[t].owners+"</td><td>"+x[t].tenants+"</td><td>"+x[t].delegates+"</td><td><b>"+x[t].total+"</b></td><td>"+x.occ[t]+"</td></tr>"; }).join("") +
+      (ts.length > 1 ? "<tr><th>الكل</th><td>"+x.owners+"</td><td>"+x.tenants+"</td><td>"+x.delegates+"</td><td><b>"+x.total+"</b></td><td>"+(x.occ.v + x.occ.a)+"</td></tr>" : "") + "</tbody></table></div>" : "";
     $("#cKv").innerHTML = x ? "<dt>الأعداد</dt><dd>"+mini+"</dd><dt>مشرف القطاع</dt><dd>"+esc(x.by)+"</dd><dt>وقت التسليم</dt><dd><span class=\"num\">"+esc(x.at)+"</span>"+(x.late ? ' <span class="pill p-amber">متأخر</span>' : "")+"</dd>"+(x.notes ? "<dt>ملاحظات</dt><dd>"+esc(x.notes)+"</dd>" : "")
       : '<dt>الحالة</dt><dd><span class="pill p-red">ماسلّمش</span></dd>';
     $("#cEdits").innerHTML = '<li>بيحمّل…</li>'; $("#cEditsBox").hidden = !x;
@@ -559,12 +572,21 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     var tsel = function(s){ var v = s.types.join(""); return '<select data-sectype="'+esc(s.name)+'" aria-label="وحدات '+esc(s.name)+'" style="width:auto;padding:4px 6px;font-size:13px"><option value="va"'+(v === "va" ? " selected" : "")+'>فيلات وشقق</option><option value="v"'+(v === "v" ? " selected" : "")+'>فيلات بس</option><option value="a"'+(v === "a" ? " selected" : "")+'>شقق بس</option></select>'; };
     $("#secList").innerHTML = AD.sectors.map(function(s){ return '<span class="tagitem'+(s.active ? "" : " off")+'"><b>'+bd(s.name)+'</b>'+tsel(s)+'<button class="sm" type="button" data-sec="'+esc(s.name)+'" data-on="'+(s.active ? "0" : "1")+'">'+(s.active ? "إيقاف" : "تشغيل")+'</button></span>'; }).join("");
     $("#sGrace").value = AD.settings.grace; $("#sAlerts").value = AD.settings.alerts ? "1" : "0";
+    $("#sDayStart").value = AD.settings.dayStart; drawTimes(AD.settings.times);
   }
   function afterAdmin(d){ AD = d; drawAdmin(); run("whoami", TOKEN).then(function(r){ B = r; options($("#tSector"), B.sectors, $("#tSector").value); fillForm(); }); }
   $("#secList").addEventListener("click", function(e){ var b = e.target.closest("button[data-sec]"); if(!b) return; busy(b, true); run("saveSector", TOKEN, b.getAttribute("data-sec"), b.getAttribute("data-on") === "1").then(afterAdmin).catch(function(err){ toast(errMsg(err)); busy(b, false); }); });
   $("#secList").addEventListener("change", function(e){ var sel = e.target.closest("select[data-sectype]"); if(!sel) return; run("saveSectorTypes", TOKEN, sel.getAttribute("data-sectype"), sel.value.split("")).then(function(d){ toast("اتحفظ: " + sel.options[sel.selectedIndex].text); afterAdmin(d); }).catch(function(err){ toast(errMsg(err)); }); });
   $("#secForm").addEventListener("submit", function(e){ e.preventDefault(); var v = $("#newSec").value.trim(); if(!v) return; run("saveSector", TOKEN, v, true, $("#newSecType").value === "v" ? "فيلات" : $("#newSecType").value === "a" ? "شقق" : "فيلات وشقق").then(function(d){ $("#newSec").value = ""; toast("اتضاف قطاع " + v); afterAdmin(d); }).catch(function(err){ toast(errMsg(err)); }); });
-  $("#setForm").addEventListener("submit", function(e){ e.preventDefault(); run("saveSettings", TOKEN, { grace: $("#sGrace").value, alerts: $("#sAlerts").value === "1" }).then(function(d){ AD = d; drawAdmin(); toast("اتحفظت الإعدادات."); }).catch(function(err){ toast(errMsg(err)); }); });
+  function tLabel(t){ var p = t.split(":").map(Number), h = p[0], m = p[1]; if(isNaN(h)) return ""; if(h === 0 && m === 0) return "12 منتصف الليل"; var h12 = h % 12 === 0 ? 12 : h % 12; return h12 + (m ? ":" + ("0"+m).slice(-2) : "") + " " + (h < 4 ? "بعد منتصف الليل" : h < 12 ? "صباحاً" : h < 15 ? "ظهراً" : h < 18 ? "عصراً" : "مساءً"); }
+  function drawTimes(list){
+    $("#sTimes").innerHTML = list.map(function(t){ return '<span class="timeitem"><input type="time" value="'+esc(t)+'" aria-label="ميعاد تمام"><small>'+esc(tLabel(t))+'</small><button class="sm" type="button" data-rm>شيل</button></span>'; }).join("");
+  }
+  function readTimes(){ return $$("#sTimes input").map(function(i){ return i.value; }).filter(String); }
+  $("#sTimes").addEventListener("input", function(e){ if(e.target.tagName === "INPUT") e.target.nextElementSibling.textContent = tLabel(e.target.value); });
+  $("#sTimes").addEventListener("click", function(e){ var b = e.target.closest("button[data-rm]"); if(!b) return; if($$("#sTimes input").length <= 1){ toast("لازم يفضل ميعاد واحد على الأقل."); return; } b.parentNode.remove(); });
+  $("#sAddTime").addEventListener("click", function(){ var l = readTimes(); l.push(""); drawTimes(l); var ins = $$("#sTimes input"); ins[ins.length - 1].focus(); });
+  $("#setForm").addEventListener("submit", function(e){ e.preventDefault(); run("saveSettings", TOKEN, { grace: $("#sGrace").value, alerts: $("#sAlerts").value === "1", times: readTimes(), dayStart: $("#sDayStart").value }).then(function(d){ AD = d; drawAdmin(); toast("اتحفظت الإعدادات."); run("whoami", TOKEN).then(function(r){ B = r; $("#tRound").innerHTML = B.rounds.map(function(x){ return '<option value="'+x.key+'">'+esc(x.label)+'</option>'; }).join(""); }); }).catch(function(err){ toast(errMsg(err)); }); });
   $("#uRole").innerHTML = ["guard","manager","admin"].map(function(k){ return '<option value="'+k+'">'+esc(ROLE_LABEL[k])+'</option>'; }).join("");
   function drawSecs(sel){
     var role = $("#uRole").value;
