@@ -18,12 +18,10 @@ const SETTINGS_SHEET = 'الإعدادات';
 
 const L_HEADERS = ['يوم التمام', 'موعد التمام', 'القطاع', 'ملاك', 'مستأجرين', 'مفوضين', 'الإجمالي', 'مشرف القطاع', 'الحساب',
   'وقت التسليم', 'متأخر', 'آخر تعديل', 'ملاحظات', 'المفتاح',
-  'ملاك فيلات', 'مستأجرين فيلات', 'مفوضين فيلات', 'ملاك شقق', 'مستأجرين شقق', 'مفوضين شقق',
-  'فيلات مشغولة', 'شقق مشغولة'];
+  'ملاك فيلات', 'مستأجرين فيلات', 'مفوضين فيلات', 'ملاك شقق', 'مستأجرين شقق', 'مفوضين شقق'];
 // أنواع الوحدات: كل قطاع فيه فيلات أو شقق أو الاتنين، والتمام بيتقسم عليهم
 const UTYPES = [{ key: 'v', label: 'فيلات' }, { key: 'a', label: 'شقق' }];
 const UCOLS = { v: ['ملاك فيلات', 'مستأجرين فيلات', 'مفوضين فيلات'], a: ['ملاك شقق', 'مستأجرين شقق', 'مفوضين شقق'] };
-const OCC = { v: 'فيلات مشغولة', a: 'شقق مشغولة' };   // عدد الوحدات اللي فيها حد
 const LC = {}; L_HEADERS.forEach(function (h, i) { LC[h] = i; });
 const E_HEADERS = ['الوقت', 'الحساب', 'يوم التمام', 'موعد التمام', 'القطاع', 'قبل', 'بعد', 'ملاحظات'];
 const U_HEADERS = ['اسم المستخدم', 'الاسم', 'الدور', 'القطاعات', 'نشط', 'آخر دخول', 'تاريخ الإنشاء', 'الإيميل', 'salt', 'hash', 'ver'];
@@ -95,7 +93,7 @@ function ensureSheet_(name, headers, init) {
 function logSheet_() {
   return ensureSheet_(LOG_SHEET, L_HEADERS, function (sh) {
     sh.getRange(1, LC['ملاك'] + 1, sh.getMaxRows(), 4).setNumberFormat('0');
-    sh.getRange(1, LC['ملاك فيلات'] + 1, sh.getMaxRows(), 8).setNumberFormat('0');
+    sh.getRange(1, LC['ملاك فيلات'] + 1, sh.getMaxRows(), 6).setNumberFormat('0');
     sh.hideColumns(LC['المفتاح'] + 1, 1); sh.hideColumns(LC['الحساب'] + 1, 1);
   });
 }
@@ -488,7 +486,7 @@ function rowObj_(r) {
   };
   const k = String(r[LC['المفتاح']] || '').split('|');
   return { day: String(r[LC['يوم التمام']]), round: k[1] || roundKeyOf_(String(r[LC['موعد التمام']])), roundLabel: String(r[LC['موعد التمام']]), sector: String(r[LC['القطاع']]),
-    v: part('v'), a: part('a'), occ: { v: n(OCC.v), a: n(OCC.a) },
+    v: part('v'), a: part('a'),
     owners: n('ملاك'), tenants: n('مستأجرين'), delegates: n('مفوضين'), total: n('ملاك') + n('مستأجرين') + n('مفوضين'),
     by: String(r[LC['مشرف القطاع']]), at: String(r[LC['وقت التسليم']]), late: String(r[LC['متأخر']]) === 'نعم',
     edited: String(r[LC['آخر تعديل']] || ''), notes: String(r[LC['ملاحظات']] || '') };
@@ -537,20 +535,16 @@ function submitTamam(token, d) {
   const r = roundOf_(rk);
   // الأعداد مقسومة على الفيلات والشقق حسب نوع وحدات القطاع
   const types = sectorTypes_()[sector] || ['v', 'a'];
-  const parts = {}, occ = { v: 0, a: 0 };
+  const parts = {};
   UTYPES.forEach(function (ut) {
     const src = (d.parts || {})[ut.key];
-    if (types.indexOf(ut.key) < 0) { parts[ut.key] = [0, 0, 0]; occ[ut.key] = 0; return; }
+    if (types.indexOf(ut.key) < 0) { parts[ut.key] = [0, 0, 0]; return; }
     if (!src) throw new Error('اكتب أعداد ال' + ut.label + '.');
     parts[ut.key] = [count_(src.owners, 'ملاك ال' + ut.label), count_(src.tenants, 'مستأجرين ال' + ut.label), count_(src.delegates, 'مفوضين ال' + ut.label)];
-    occ[ut.key] = count_(src.units, 'ال' + ut.label + ' المشغولة');
-    const people = parts[ut.key][0] + parts[ut.key][1] + parts[ut.key][2];
-    if (occ[ut.key] > people) throw new Error('عدد ال' + ut.label + ' المشغولة (' + occ[ut.key] + ') أكبر من عدد الأشخاص فيها (' + people + '). راجع الأرقام.');
-    if (people > 0 && occ[ut.key] === 0) throw new Error('فيه ' + people + ' شخص في ال' + ut.label + '، اكتب عدد ال' + ut.label + ' المشغولة.');
   });
   const owners = parts.v[0] + parts.a[0], tenants = parts.v[1] + parts.a[1], delegates = parts.v[2] + parts.a[2];
   const notes = clean_(d.notes, 500);
-  const sig = function (pv, pa, ov, oa) { return types.map(function (t) { return (t === 'v' ? 'فيلات ' : 'شقق ') + (t === 'v' ? pv : pa).join('/') + ' (' + (t === 'v' ? ov : oa) + ' مشغولة)'; }).join(' · '); };
+  const sig = function (pv, pa) { return types.map(function (t) { return (t === 'v' ? 'فيلات ' : 'شقق ') + (t === 'v' ? pv : pa).join('/'); }).join(' · '); };
   const now = new Date(), k = key_(day, rk, sector);
   const late = now.getTime() > schedOf_(day, r).getTime() + settings_().grace * 60000;
   const lock = LockService.getScriptLock(); lock.waitLock(20000);
@@ -559,10 +553,10 @@ function submitTamam(token, d) {
     const at = rowOfKey_(sh, k);
     if (at) {
       const old = rowObj_(sh.getRange(at, 1, 1, L_HEADERS.length).getValues()[0].map(fmt_));
-      const before = sig([old.v.owners, old.v.tenants, old.v.delegates], [old.a.owners, old.a.tenants, old.a.delegates], old.occ.v, old.occ.a), after = sig(parts.v, parts.a, occ.v, occ.a);
+      const before = sig([old.v.owners, old.v.tenants, old.v.delegates], [old.a.owners, old.a.tenants, old.a.delegates]), after = sig(parts.v, parts.a);
       if (before === after && old.notes === notes) return { ok: true, same: true, state: myState(token) };
       sh.getRange(at, LC['ملاك'] + 1, 1, 4).setValues([[owners, tenants, delegates, owners + tenants + delegates]]);
-      sh.getRange(at, LC['ملاك فيلات'] + 1, 1, 8).setValues([parts.v.concat(parts.a, [occ.v, occ.a])]);
+      sh.getRange(at, LC['ملاك فيلات'] + 1, 1, 6).setValues([parts.v.concat(parts.a)]);
       sh.getRange(at, LC['آخر تعديل'] + 1, 1, 2).setValues([["'" + u.name + ' ' + stamp_(now), notes]]);
       editsSheet_().appendRow(["'" + stamp_(now), u.username, "'" + day, r.label, sector, before, after, notes]);
       return { ok: true, edited: true, state: myState(token) };
@@ -572,7 +566,7 @@ function submitTamam(token, d) {
     row[LC['ملاك']] = owners; row[LC['مستأجرين']] = tenants; row[LC['مفوضين']] = delegates; row[LC['الإجمالي']] = owners + tenants + delegates;
     row[LC['مشرف القطاع']] = u.name; row[LC['الحساب']] = u.username; row[LC['وقت التسليم']] = "'" + stamp_(now);
     row[LC['متأخر']] = late ? 'نعم' : ''; row[LC['ملاحظات']] = notes; row[LC['المفتاح']] = k;
-    UTYPES.forEach(function (ut) { UCOLS[ut.key].forEach(function (h, i) { row[LC[h]] = parts[ut.key][i]; }); row[LC[OCC[ut.key]]] = occ[ut.key]; });
+    UTYPES.forEach(function (ut) { UCOLS[ut.key].forEach(function (h, i) { row[LC[h]] = parts[ut.key][i]; }); });
     sh.appendRow(row);
     return { ok: true, late: late, state: myState(token) };
   } finally { lock.releaseLock(); }
@@ -590,11 +584,10 @@ function dashboard(token, day) {
     const got = rows.filter(function (x) { return x.round === r.key; });
     const sum = function (f) { return got.reduce(function (a, x) { return a + x[f]; }, 0); };
     const sumT = function (t) { return got.reduce(function (a, x) { return a + x[t].total; }, 0); };
-    const sumO = function (t) { return got.reduce(function (a, x) { return a + x.occ[t]; }, 0); };
     const sched = schedOf_(day, r).getTime();
     const state = now < sched - EARLY_MIN * 60000 ? 'future' : now < sched + grace ? 'open' : 'due';
     return { key: r.key, label: r.label, at: stamp_(new Date(sched)), state: state,
-      owners: sum('owners'), tenants: sum('tenants'), delegates: sum('delegates'), total: sum('total'), villas: sumT('v'), apts: sumT('a'), occV: sumO('v'), occA: sumO('a'),
+      owners: sum('owners'), tenants: sum('tenants'), delegates: sum('delegates'), total: sum('total'), villas: sumT('v'), apts: sumT('a'),
       done: got.length, missing: state === 'future' ? [] : secs.filter(function (s) { return !got.some(function (x) { return x.sector === s; }); }) };
   });
   const cells = {};
@@ -630,9 +623,9 @@ function exportRange(token, from, to) {
   const order = {}; rounds_().forEach(function (r, i) { order[r.key] = i; });
   const rows = rowsFor_(days).filter(function (r) { return canSee_(u, r.sector); })
     .sort(function (a, b) { return a.day < b.day ? -1 : a.day > b.day ? 1 : (order[a.round] || 0) - (order[b.round] || 0) || (a.sector < b.sector ? -1 : 1); });
-  return [['يوم التمام', 'موعد التمام', 'القطاع', 'ملاك فيلات', 'مستأجرين فيلات', 'مفوضين فيلات', 'إجمالي الفيلات', 'فيلات مشغولة', 'ملاك شقق', 'مستأجرين شقق', 'مفوضين شقق', 'إجمالي الشقق', 'شقق مشغولة',
+  return [['يوم التمام', 'موعد التمام', 'القطاع', 'ملاك فيلات', 'مستأجرين فيلات', 'مفوضين فيلات', 'إجمالي الفيلات', 'ملاك شقق', 'مستأجرين شقق', 'مفوضين شقق', 'إجمالي الشقق',
     'ملاك', 'مستأجرين', 'مفوضين', 'الإجمالي', 'مشرف القطاع', 'وقت التسليم', 'متأخر', 'آخر تعديل', 'ملاحظات']]
-    .concat(rows.map(function (x) { return [x.day, x.roundLabel, x.sector, x.v.owners, x.v.tenants, x.v.delegates, x.v.total, x.occ.v, x.a.owners, x.a.tenants, x.a.delegates, x.a.total, x.occ.a,
+    .concat(rows.map(function (x) { return [x.day, x.roundLabel, x.sector, x.v.owners, x.v.tenants, x.v.delegates, x.v.total, x.a.owners, x.a.tenants, x.a.delegates, x.a.total,
       x.owners, x.tenants, x.delegates, x.total, x.by, x.at, x.late ? 'نعم' : '', x.edited, x.notes]; }));
 }
 

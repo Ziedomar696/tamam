@@ -95,7 +95,6 @@ table.mini{font-size:13px}table.mini td,table.mini th{padding:5px 8px;text-align
 .done-note{border-radius:10px;padding:10px 12px;background:var(--green-bg);color:var(--green);font-size:14px}
 /* dashboard */
 .rounds{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
-.counter.occ{border-style:dashed}
 .timelist{display:flex;flex-wrap:wrap;gap:8px}
 .timeitem{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;padding:4px 6px;background:var(--surface-2)}
 .timeitem input{width:auto;padding:5px 8px;direction:ltr}
@@ -424,11 +423,11 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     $("#tParts").innerHTML = ts.map(function(t){
       return '<div class="ublock" data-t="'+t+'"><h3><span>'+ULABEL[t]+'</span><span>الإجمالي <b id="sub_'+t+'">0</b></span></h3><div class="counters">' +
         FIELDS.map(function(f){ var id = "n_"+t+"_"+f[0]; return '<div class="counter"><span>'+f[1]+'</span><div class="stepper"><button type="button" data-d="-1" data-for="'+id+'">−</button><input id="'+id+'" inputmode="numeric" value="0" aria-label="'+f[1]+' — '+ULABEL[t]+'"><button type="button" data-d="1" data-for="'+id+'">+</button></div></div>'; }).join("") +
-        '</div>' + (function(){ var id = "n_"+t+"_units", l = "عدد "+ULABEL[t]+" المشغولة"; return '<div class="counter occ"><span>'+l+' (فيها حد)</span><div class="stepper"><button type="button" data-d="-1" data-for="'+id+'">−</button><input id="'+id+'" inputmode="numeric" value="0" aria-label="'+l+'"><button type="button" data-d="1" data-for="'+id+'">+</button></div></div>'; })() + '</div>';
+        '</div></div>';
     }).join("");
   }
   function numOf(id){ var el = $("#"+id); if(!el) return 0; var v = String(el.value).replace(/[٠-٩]/g, function(d){ return "٠١٢٣٤٥٦٧٨٩".indexOf(d); }).replace(/\D/g, ""); return v === "" ? NaN : Number(v); }
-  function parts(){ var o = {}; typesOf($("#tSector").value).forEach(function(t){ o[t] = {}; FIELDS.forEach(function(f){ o[t][f[0]] = numOf("n_"+t+"_"+f[0]); }); o[t].units = numOf("n_"+t+"_units"); }); return o; }
+  function parts(){ var o = {}; typesOf($("#tSector").value).forEach(function(t){ o[t] = {}; FIELDS.forEach(function(f){ o[t][f[0]] = numOf("n_"+t+"_"+f[0]); }); }); return o; }
   function total(){
     var p = parts(), g = 0, bad = false;
     Object.keys(p).forEach(function(t){ var s = p[t].owners + p[t].tenants + p[t].delegates; if(isNaN(s)) bad = true; else g += s; var el = $("#sub_"+t); if(el) el.textContent = isNaN(s) ? "—" : fmt(s); });
@@ -449,7 +448,7 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     var box = $("#tDone");
     if(row){
       box.hidden = false; box.textContent = "✓ اتسلّم تمام " + rLabel(t.round) + " لقطاع " + sec + " الساعة " + hm(row.at) + " (" + row.by + ")" + (row.edited ? " · آخر تعديل: " + row.edited.replace(/\s*\d{4}-\d{2}-\d{2} (\d{2}:\d{2})/, " الساعة $1") : "") + ". لو عدّلت الأرقام، التعديل بيتسجل.";
-      buildParts(); typesOf(sec).forEach(function(t){ FIELDS.forEach(function(f){ var el = $("#n_"+t+"_"+f[0]); if(el) el.value = row[t][f[0]]; }); var u = $("#n_"+t+"_units"); if(u) u.value = row.occ[t]; }); $("#tNotes").value = row.notes;
+      buildParts(); typesOf(sec).forEach(function(t){ FIELDS.forEach(function(f){ var el = $("#n_"+t+"_"+f[0]); if(el) el.value = row[t][f[0]]; }); }); $("#tNotes").value = row.notes;
       $("#tSave").textContent = "حفظ التعديل";
     } else {
       box.hidden = true; buildParts(); $("#tNotes").value = "";
@@ -484,7 +483,7 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
   $("#tDay").addEventListener("change", loadExtra); $("#tRound").addEventListener("change", loadExtra);
   $("#tForm").addEventListener("submit", function(e){
     e.preventDefault();
-    var pr = parts(), bad = Object.keys(pr).some(function(t){ return isNaN(pr[t].units) || FIELDS.some(function(f){ return isNaN(pr[t][f[0]]); }); });
+    var pr = parts(), bad = Object.keys(pr).some(function(t){ return FIELDS.some(function(f){ return isNaN(pr[t][f[0]]); }); });
     if(bad){ $("#tMsg").textContent = "اكتب كل الأعداد (صفر لو مفيش)."; return; }
     if(!$("#tSector").value){ $("#tMsg").textContent = "اختار القطاع."; return; }
     var t = target();
@@ -517,7 +516,6 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
       return '<div class="rcard'+(now ? " now" : "")+'"><div class="h"><span>'+esc(r.label)+'</span>'+st+'</div>' +
         '<div class="tot">'+(r.done ? fmt(r.total) : "—")+'</div>' +
         '<div class="br"><span>فيلات <b>'+fmt(r.villas)+'</b></span><span>شقق <b>'+fmt(r.apts)+'</b></span></div>' +
-        '<div class="br"><span>مشغول: '+fmt(r.occV)+' فيلا · '+fmt(r.occA)+' شقة</span></div>' +
         '<div class="br"><span>ملاك '+fmt(r.owners)+'</span><span>مستأجرين '+fmt(r.tenants)+'</span><span>مفوضين '+fmt(r.delegates)+'</span></div>' +
         '<div class="br"><span>سلّم '+r.done+' من '+d.sectors.length+'</span></div>' +
         (r.missing.length && r.state !== "future" ? '<div class="miss">'+(r.state === "due" ? "ماسلّمش: " : "لسه: ")+r.missing.map(bd).join("، ")+'</div>' : "") + '</div>';
@@ -543,9 +541,9 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     CELL = { s: s, k: k, day: DASH.day };
     $("#cTitle").textContent = "تمام " + rLabel(k) + " — " + s + " — " + dayLabel(DASH.day);
     var ts = typesOf(s);
-    var mini = x ? '<div class="tablewrap"><table class="mini"><thead><tr><th></th><th>ملاك</th><th>مستأجرين</th><th>مفوضين</th><th>الإجمالي</th><th>وحدات مشغولة</th></tr></thead><tbody>' +
-      ts.map(function(t){ return "<tr><th>"+ULABEL[t]+"</th><td>"+x[t].owners+"</td><td>"+x[t].tenants+"</td><td>"+x[t].delegates+"</td><td><b>"+x[t].total+"</b></td><td>"+x.occ[t]+"</td></tr>"; }).join("") +
-      (ts.length > 1 ? "<tr><th>الكل</th><td>"+x.owners+"</td><td>"+x.tenants+"</td><td>"+x.delegates+"</td><td><b>"+x.total+"</b></td><td>"+(x.occ.v + x.occ.a)+"</td></tr>" : "") + "</tbody></table></div>" : "";
+    var mini = x ? '<div class="tablewrap"><table class="mini"><thead><tr><th></th><th>ملاك</th><th>مستأجرين</th><th>مفوضين</th><th>الإجمالي</th></tr></thead><tbody>' +
+      ts.map(function(t){ return "<tr><th>"+ULABEL[t]+"</th><td>"+x[t].owners+"</td><td>"+x[t].tenants+"</td><td>"+x[t].delegates+"</td><td><b>"+x[t].total+"</b></td></tr>"; }).join("") +
+      (ts.length > 1 ? "<tr><th>الكل</th><td>"+x.owners+"</td><td>"+x.tenants+"</td><td>"+x.delegates+"</td><td><b>"+x.total+"</b></td></tr>" : "") + "</tbody></table></div>" : "";
     $("#cKv").innerHTML = x ? "<dt>الأعداد</dt><dd>"+mini+"</dd><dt>مشرف القطاع</dt><dd>"+esc(x.by)+"</dd><dt>وقت التسليم</dt><dd><span class=\"num\">"+esc(x.at)+"</span>"+(x.late ? ' <span class="pill p-amber">متأخر</span>' : "")+"</dd>"+(x.notes ? "<dt>ملاحظات</dt><dd>"+esc(x.notes)+"</dd>" : "")
       : '<dt>الحالة</dt><dd><span class="pill p-red">ماسلّمش</span></dd>';
     $("#cEdits").innerHTML = '<li>بيحمّل…</li>'; $("#cEditsBox").hidden = !x;
