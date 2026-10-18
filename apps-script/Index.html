@@ -104,6 +104,8 @@ table.mini{font-size:13px}table.mini td,table.mini th{padding:5px 8px;text-align
 .rcard .h{display:flex;justify-content:space-between;align-items:center;gap:6px;font-weight:700}
 .rcard .tot{font-family:var(--mono);font-size:30px;font-weight:600;line-height:1.2}
 .rcard .br{font-size:12.5px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.rstat{display:flex;flex-wrap:wrap;gap:6px;margin-inline-start:auto;font-size:12.5px;font-weight:500}
+.rstat .chip2{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;padding:2px 4px 2px 10px;background:var(--surface-2);color:var(--ink);white-space:nowrap}
 .rsplit{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
 .rsplit th,.rsplit td{padding:3px 4px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
 .rsplit thead th{color:var(--muted);font-weight:600;font-size:11.5px;background:transparent}
@@ -250,7 +252,7 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     </div>
     <div class="rounds" id="dRounds"></div>
     <div class="card">
-      <h2>القطاعات</h2>
+      <h2>القطاعات <span class="rstat" id="dStat"></span></h2>
       <div class="legend"><span><i style="background:var(--green-bg)"></i>سلّم</span><span><i style="background:var(--amber-bg)"></i>سلّم متأخر</span><span><i style="background:var(--red-bg)"></i>ماسلّمش</span><span><i style="background:var(--grey-bg)"></i>لسه ميعاده ماجاش / مفتوح</span></div>
       <div id="dTable"></div>
       <p class="hint">اضغط على أي خانة تشوف مين سلّم وإمتى وأي تعديل حصل.</p>
@@ -553,14 +555,17 @@ dialog form,dialog .body{padding:16px;display:grid;gap:12px}
     var isToday = d.day === d.today;
     $("#dRounds").innerHTML = d.rounds.map(function(r){
       var now = isToday && r.key === d.current.key;
-      var st = r.state === "future" ? '<span class="pill p-grey">لسه</span>' : r.missing.length ? (r.state === "due" ? '<span class="pill p-red">ناقص ' + r.missing.length + '</span>' : '<span class="pill p-amber">مفتوح</span>') : '<span class="pill p-green">كامل</span>';
-      return '<div class="rcard'+(now ? " now" : "")+'"><div class="h"><span>'+esc(r.label)+'</span>'+st+'</div>' +
+      return '<div class="rcard'+(now ? " now" : "")+'"><div class="h"><span>'+esc(r.label)+'</span></div>' +
         '<div class="tot">'+(r.done ? fmt(r.total) : "—")+'</div>' +
         '<table class="rsplit"><thead><tr><th></th><th>فيلات</th><th>شقق</th><th>الإجمالي</th></tr></thead><tbody>' +
           [["owners","ملاك"],["tenants","مستأجرين"],["delegates","مفوضين"]].map(function(f){ return '<tr><th>'+f[1]+'</th><td>'+fmt(r.v[f[0]])+'</td><td>'+fmt(r.a[f[0]])+'</td><td><b>'+fmt(r[f[0]])+'</b></td></tr>'; }).join("") +
           '<tr class="tt"><th>الإجمالي</th><td><b>'+fmt(r.villas)+'</b></td><td><b>'+fmt(r.apts)+'</b></td><td><b>'+fmt(r.total)+'</b></td></tr></tbody></table>' +
-        '<div class="br"><span>سلّم '+r.done+' من '+d.sectors.length+'</span></div>' +
         (r.missing.length && r.state !== "future" ? '<div class="miss">'+(r.state === "due" ? "ماسلّمش: " : "لسه: ")+r.missing.map(bd).join("، ")+'</div>' : "") + '</div>';
+    }).join("");
+    // حالة التسليم لكل ميعاد جنب عنوان «القطاعات»
+    $("#dStat").innerHTML = d.rounds.map(function(r){
+      var st = r.state === "future" ? '<span class="pill p-grey">لسه</span>' : r.missing.length ? (r.state === "due" ? '<span class="pill p-red">ناقص ' + r.missing.length + '</span>' : '<span class="pill p-amber">مفتوح</span>') : '<span class="pill p-green">كامل</span>';
+      return '<span class="chip2"><b>'+esc(r.label)+'</b> سلّم <span class="num">'+r.done+'</span> من <span class="num">'+d.sectors.length+'</span> '+st+'</span>';
     }).join("");
     var head = '<tr><th>القطاع</th>' + d.rounds.map(function(r){ return "<th>"+esc(r.label)+"</th>"; }).join("") + "</tr>";
     var body = d.sectors.map(function(s){
